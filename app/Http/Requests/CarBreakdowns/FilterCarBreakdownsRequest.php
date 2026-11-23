@@ -21,6 +21,7 @@ class FilterCarBreakdownsRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:150'],
+            'vehicle_category' => ['nullable', 'string', 'max:30'],
             'branch' => ['nullable', 'string', 'max:100'],
             'department' => ['nullable', 'string', 'max:120'],
             'fuel_type' => ['nullable', 'string', 'max:40'],
@@ -35,6 +36,7 @@ class FilterCarBreakdownsRequest extends FormRequest
     {
         return $this->safe()->only([
             'search',
+            'vehicle_category',
             'branch',
             'department',
             'fuel_type',

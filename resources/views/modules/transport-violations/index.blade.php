@@ -78,6 +78,7 @@
             search-placeholder="ابحث برقم المخالفة، السجل، الإدارة، المدينة، رقم اللوحة، الكود، السائق، أو الرقم الوظيفي..."
             :create-model="\App\Models\TransportViolation::class"
             create-label="إضافة مخالفة جديدة"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">السجل</label>
@@ -304,6 +305,16 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('transport-violations.import.direct')"
+            :template-url="route('transport-violations.import.template')"
+            title="استيراد وإسقاط بيانات مخالفات وزارة النقل"
+        />
+        <x-module.purge-modal
+            :action="route('transport-violations.purge-all')"
+            module-name="مخالفات وزارة النقل"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection
 

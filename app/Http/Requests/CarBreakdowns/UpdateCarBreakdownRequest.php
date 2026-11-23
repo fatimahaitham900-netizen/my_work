@@ -19,9 +19,13 @@ class UpdateCarBreakdownRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $carCode = $this->filled('car_code') ? trim((string) $this->input('car_code')) : null;
+        $carType = $this->filled('car_type') ? trim((string) $this->input('car_type')) : null;
+
         $this->merge([
-            'car_code' => $this->filled('car_code') ? trim((string) $this->input('car_code')) : null,
-            'car_type' => $this->filled('car_type') ? trim((string) $this->input('car_type')) : null,
+            'car_code' => $carCode,
+            'vehicle_category' => CarBreakdown::resolveCategory($this->input('vehicle_category'), $carCode, $carType),
+            'car_type' => $carType,
             'plate_number' => $this->filled('plate_number') ? trim((string) $this->input('plate_number')) : null,
             'model_year' => $this->filled('model_year') ? trim((string) $this->input('model_year')) : null,
             'previous_receiver' => $this->filled('previous_receiver') ? trim((string) $this->input('previous_receiver')) : null,
@@ -41,6 +45,7 @@ class UpdateCarBreakdownRequest extends FormRequest
     {
         return [
             'car_code' => ['nullable', 'string', 'max:50'],
+            'vehicle_category' => ['nullable', 'string', 'in:سيارة,باص'],
             'car_type' => ['nullable', 'string', 'max:150'],
             'plate_number' => ['nullable', 'string', 'max:60'],
             'model_year' => ['nullable', 'string', 'max:20'],

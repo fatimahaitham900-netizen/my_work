@@ -45,30 +45,11 @@
     @endphp
 
     <div x-data="fleetModuleManager(@js($moduleConfig))" class="space-y-5">
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-medium text-slate-500">إجمالي السائقين</p>
-                <p class="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-amber-800">جاهزون للتكليف</p>
-                <p class="mt-1.5 text-2xl font-bold text-amber-800 tabular-nums" x-text="kpis.ready">{{ $kpis['ready'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-rose-700">رخص منتهية / قاربت</p>
-                <p class="mt-1.5 text-2xl font-bold text-rose-700 tabular-nums" x-text="kpis.license_alerts">{{ $kpis['license_alerts'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-sky-200/90 bg-sky-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-sky-800">إجازة / تحت التقييم</p>
-                <p class="mt-1.5 text-2xl font-bold text-sky-800 tabular-nums" x-text="kpis.other">{{ $kpis['other'] }}</p>
-            </div>
-        </section>
-
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث باسم السائق، المهنة، الرقم الوظيفي، الموقع، أو الملاحظات..."
             :create-model="\App\Models\UnassignedDriver::class"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">الموقع</label>
@@ -112,7 +93,7 @@
         </x-module.toolbar>
 
         {{-- Ruled Data Table --}}
-        <div class="relative overflow-hidden rounded-2xl border border-slate-300/80 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-white shadow-md">
             <div x-show="loadingTable" x-cloak class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
                 <span class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg">
                     <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -212,5 +193,15 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('unassigned-drivers.import.direct')"
+            :template-url="route('unassigned-drivers.import.template')"
+            title="استيراد وإسقاط بيانات سائقين بدون معدات"
+        />
+        <x-module.purge-modal
+            :action="route('unassigned-drivers.purge-all')"
+            module-name="سائقين بدون معدات"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection

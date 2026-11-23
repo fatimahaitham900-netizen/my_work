@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\MaintenanceDeviations\FilterMaintenanceDeviationsRequest;
 use App\Http\Requests\MaintenanceDeviations\StoreMaintenanceDeviationRequest;
 use App\Http\Requests\MaintenanceDeviations\UpdateMaintenanceDeviationRequest;
@@ -18,9 +19,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaintenanceDeviationController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly MaintenanceDeviationService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'maintenance-deviations';
+    }
+
+    protected function importModelClass(): string
+    {
+        return MaintenanceDeviation::class;
+    }
 
     public function index(FilterMaintenanceDeviationsRequest $request): View|JsonResponse
     {

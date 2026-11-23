@@ -40,31 +40,12 @@
     @endphp
 
     <div x-data="fleetModuleManager(@js($moduleConfig))" class="space-y-5">
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-bold text-slate-600">إجمالي المعدات</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/70 p-4 shadow-xs">
-                <p class="text-xs font-bold text-rose-700">توقف مرتفع (7 أيام فأكثر)</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-rose-800 tabular-nums" x-text="kpis.high_idle_days">{{ $kpis['high_idle_days'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 shadow-xs">
-                <p class="text-xs font-bold text-amber-800">مجموع أيام التوقف</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-amber-900 tabular-nums" x-text="kpis.sum_idle_days">{{ $kpis['sum_idle_days'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-sky-200/90 bg-sky-50/70 p-4 shadow-xs">
-                <p class="text-xs font-bold text-sky-800">المشاريع والمواقع المتأثرة</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-sky-900 tabular-nums" x-text="kpis.sites_count">{{ $kpis['sites_count'] }}</p>
-            </div>
-        </section>
-
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث بكود المعدة، نوع المعدة، اسم السائق، الرقم الوظيفي، الفرع، أو الموقع..."
             :create-model="\App\Models\IdleProjectEquipment::class"
             create-label="إضافة معدة بدون عمل"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">الفرع</label>
@@ -108,7 +89,7 @@
         </x-module.toolbar>
 
         {{-- Ruled Data Table --}}
-        <div class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-white shadow-md">
             <div x-show="loadingTable" x-cloak class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
                 <span class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg">
                     <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -202,6 +183,16 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('idle-project-equipment.import.direct')"
+            :template-url="route('idle-project-equipment.import.template')"
+            title="استيراد وإسقاط بيانات معدات بدون عمل فعلي"
+        />
+        <x-module.purge-modal
+            :action="route('idle-project-equipment.purge-all')"
+            module-name="معدات بدون عمل فعلي بالمشاريع"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection
 

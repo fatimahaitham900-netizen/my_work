@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\FinancialSupportMonth;
 use App\Models\FinancialSupportTransfer;
 use App\Models\User;
+use App\Services\DashboardService;
 use Database\Seeders\FinancialSupportRealDataSeeder;
 
 it('seeds all 4 monthly summaries and 110 transfer records matching official pdf totals', function (): void {
@@ -38,13 +39,30 @@ it('renders financial support monthly tabs, deep-links under-repair counts per m
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('موقف الدعم المالي للمعدات 2026')
-        ->assertSee('704,983')
-        ->assertSee('406,629')
-        ->assertSee('298,354')
+        ->assertDontSee('شهر 8')
+        ->assertDontSee('شهر 9')
+        ->assertSee('309,342')
+        ->assertSee('167,942')
+        ->assertSee('141,400')
         ->assertSee('56,608')
         ->assertSee($month10Link)
         ->assertSee($month11Link)
         ->assertSee($month11NotTransferredLink);
+
+    // When an unrepaired equipment appears in month 8, month 8 automatically reappears on the dashboard table
+    FinancialSupportTransfer::factory()->create([
+        'support_year' => 2026,
+        'support_month' => 8,
+        'equipment_code' => 'EQ-M8-UNREPAIRED',
+        'repair_status' => 'لم يتم الاصلاح',
+    ]);
+    DashboardService::clearCache();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('شهر 8')
+        ->assertDontSee('شهر 9');
 
     $this->actingAs($user)
         ->get(route('financial-support.index', ['month' => 9]))
@@ -126,6 +144,28 @@ it('creates with optional fields, updates transfer and month summary, logs audit
         ->assertOk();
 
     expect((float) $month11->fresh()->custody_amount)->toBe(50000.0);
+
+    // Inline custody update recalculates row total and dashboard grand totals automatically without touching other columns
+    $this->actingAs($admin)
+        ->patchJson(route('financial-support.months.custody.update', $month11), [
+            'custody_amount' => 55000,
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.custody_amount', 55000)
+        ->assertJsonPath('data.total_amount', 104195)
+        ->assertJsonPath('totals.custody_amount', 151400)
+        ->assertJsonPath('totals.total_amount', 319342);
+
+    expect((float) $month11->fresh()->custody_amount)->toBe(55000.0)
+        ->and((float) $month11->fresh()->repair_support_amount)->toBe(49195.0);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('55,000')
+        ->assertSee('104,195')
+        ->assertSee('151,400')
+        ->assertSee('319,342');
 
     $csv = $this->actingAs($admin)
         ->get(route('financial-support.export', ['month' => 11, 'search' => 'WL-999']))

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\SparePartTransfers\FilterSparePartTransfersRequest;
 use App\Http\Requests\SparePartTransfers\StoreSparePartTransferRequest;
 use App\Http\Requests\SparePartTransfers\UpdateSparePartTransferRequest;
@@ -18,9 +19,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SparePartTransferController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly SparePartTransferService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'spare-part-transfers';
+    }
+
+    protected function importModelClass(): string
+    {
+        return SparePartTransfer::class;
+    }
 
     public function index(FilterSparePartTransfersRequest $request): View|JsonResponse
     {

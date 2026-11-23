@@ -1,7 +1,7 @@
 @php
     $showMonthCol = ($activeMonth ?? 'all') === 'all';
     $colSpanBeforeAmount = $showMonthCol ? 4 : 3;
-    $totalCols = $showMonthCol ? 15 : 14;
+    $totalCols = $showMonthCol ? 14 : 13;
 @endphp
 
 <div class="overflow-x-auto max-h-[72vh]">
@@ -23,8 +23,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ التحويل</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ التوريد</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ الإصلاح</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">موقف الإصلاح</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3 py-3.5 text-center">الإجراءات</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3.5 py-3.5 text-center">موقف الإصلاح</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -117,7 +116,7 @@
                     <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center font-bold {{ $item->repair_date === 'مديونية' ? 'text-amber-700' : 'text-slate-900' }} tabular-nums">
                         {{ $item->repair_date ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-center">
+                    <td class="whitespace-nowrap px-3.5 py-3 text-center">
                         @if ($status !== '')
                             <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-extrabold {{ $repairBadge }}">
                                 {{ $status }}
@@ -125,9 +124,6 @@
                         @else
                             <span class="font-bold text-slate-400">—</span>
                         @endif
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-center">
-                        <x-module.row-actions :record="$item" :label="$item->equipment_code ?: ($item->equipment_type ?: 'تحويل دعم مالي')" />
                     </td>
                 </tr>
             @empty
@@ -148,7 +144,7 @@
                     <td class="whitespace-nowrap border-e border-emerald-500/70 bg-emerald-600/90 px-4 py-3.5 text-center text-sm font-extrabold text-white tabular-nums">
                         {{ number_format((float) $filteredAmountTotal, 0) }} ر.س
                     </td>
-                    <td colspan="10" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
+                    <td colspan="9" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
                         يتم احتساب إجمالي المبالغ المعروضة وفق الشهر والفلاتر النشطة حالياً
                     </td>
                 </tr>

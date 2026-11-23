@@ -93,7 +93,7 @@
                 <div class="flex flex-wrap items-center gap-2">
                     @foreach ($documentTabs as $tab)
                         @php
-                            $isActiveTab = $tab['value'] === $activeDocumentType;
+                            $isActiveTab = ! ($isSummaryView ?? false) && $tab['value'] === $activeDocumentType;
                             $tabRouteParams = $tab['value'] !== '' ? ['document_type' => $tab['value']] : [];
                         @endphp
                         <a
@@ -106,45 +106,138 @@
                             </span>
                         </a>
                     @endforeach
+
+                    <a
+                        href="{{ route('regulatory-documents.index', ['view' => 'summary']) }}"
+                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition {{ ($isSummaryView ?? false) ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm' : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-500 hover:bg-emerald-100' }}"
+                    >
+                        <span>ملخص حسب نوع المعدة</span>
+                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums {{ ($isSummaryView ?? false) ? 'bg-white/20 text-white' : 'bg-emerald-200/80 text-emerald-900' }}">
+                            {{ count($equipmentSummary['rows'] ?? []) }}
+                        </span>
+                    </a>
                 </div>
             </div>
         </section>
 
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-bold text-slate-600">إجمالي السجلات</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/70 p-4 shadow-xs">
-                <p class="text-xs font-bold text-rose-700">منتهية أو مفقودة</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-rose-800 tabular-nums" x-text="kpis.critical">{{ $kpis['critical'] }}</p>
-            </div>
-            <button
-                type="button"
-                @click="filters.renewal_status = 'مطلوب تجديد'; applyFilters()"
-                class="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-start shadow-xs hover:bg-amber-100/70 transition cursor-pointer"
-                title="تصفية السجلات المطلوب تجديدها"
-            >
-                <p class="text-xs font-bold text-amber-800">مطلوب تجديد</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-amber-900 tabular-nums" x-text="kpis.renewal_required">{{ $kpis['renewal_required'] }}</p>
-            </button>
-            <button
-                type="button"
-                @click="filters.renewal_status = 'عمر افتراضي'; applyFilters()"
-                class="rounded-2xl border border-purple-200/90 bg-purple-50/70 p-4 text-start shadow-xs hover:bg-purple-100/70 transition cursor-pointer"
-                title="تصفية السجلات المنتهية بالعمر الافتراضي"
-            >
-                <p class="text-xs font-bold text-purple-800">عمر افتراضي</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-purple-900 tabular-nums" x-text="kpis.end_of_life">{{ $kpis['end_of_life'] }}</p>
-            </button>
-        </section>
+        @if ($isSummaryView ?? false)
+            {{-- Summary Table by Equipment Type (فحص منتهي × استمارات منتهية × كروت منتهية) --}}
+            <section class="overflow-hidden rounded-2xl border-2 border-slate-950 bg-white shadow-md">
+                <div class="bg-slate-950 px-6 py-4 text-center text-lg sm:text-xl font-black text-white">
+                    ملخص الأوراق النظامية المنتهية حسب نوع المعدة (اضغط على أي رقم لعرض التفاصيل)
+                </div>
 
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse text-center text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-black bg-sky-100/90 text-sm sm:text-base font-black text-black">
+                                <th scope="col" class="w-16 whitespace-nowrap border-e-2 border-black px-3 py-4 text-center">م</th>
+                                <th scope="col" class="whitespace-nowrap border-e-2 border-black px-5 py-4 text-center">نوع المعدة</th>
+                                <th scope="col" class="whitespace-nowrap border-e-2 border-black px-4 py-4 text-center text-rose-800">فحص منتهي</th>
+                                <th scope="col" class="whitespace-nowrap border-e-2 border-black px-4 py-4 text-center text-purple-900">استمارات منتهية</th>
+                                <th scope="col" class="whitespace-nowrap border-e-2 border-black px-4 py-4 text-center text-amber-900">كروت منتهية</th>
+                                <th scope="col" class="whitespace-nowrap bg-slate-200/80 px-5 py-4 text-center text-slate-950">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+                            @forelse ($equipmentSummary['rows'] ?? [] as $index => $row)
+                                <tr class="border-b-2 border-slate-800 even:bg-slate-100/75 hover:bg-amber-50/70 transition-colors">
+                                    <td class="whitespace-nowrap border-e-2 border-slate-400 bg-slate-200/60 px-3 py-3.5 text-center text-base font-black text-slate-950 tabular-nums">
+                                        {{ $index + 1 }}
+                                    </td>
+                                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-5 py-3.5 text-center text-base sm:text-lg font-black text-slate-950">
+                                        {{ $row['equipment_type'] }}
+                                    </td>
+                                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-4 py-3 text-center tabular-nums">
+                                        @if ($row['expired_inspection'] > 0)
+                                            <a
+                                                href="{{ route('regulatory-documents.index', array_filter(['document_type' => 'فحص دوري', 'equipment_type' => $row['raw_equipment_type']])) }}"
+                                                class="inline-flex min-w-12 items-center justify-center rounded-xl bg-rose-100 px-3.5 py-1.5 text-base font-black text-rose-900 ring-1 ring-inset ring-rose-600/35 hover:bg-rose-600 hover:text-white transition"
+                                            >
+                                                {{ number_format($row['expired_inspection']) }}
+                                            </a>
+                                        @else
+                                            <span class="text-base font-bold text-slate-300">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-4 py-3 text-center tabular-nums">
+                                        @if ($row['expired_registration'] > 0)
+                                            <a
+                                                href="{{ route('regulatory-documents.index', array_filter(['document_type' => 'استمارة', 'equipment_type' => $row['raw_equipment_type']])) }}"
+                                                class="inline-flex min-w-12 items-center justify-center rounded-xl bg-purple-100 px-3.5 py-1.5 text-base font-black text-purple-900 ring-1 ring-inset ring-purple-600/35 hover:bg-purple-700 hover:text-white transition"
+                                            >
+                                                {{ number_format($row['expired_registration']) }}
+                                            </a>
+                                        @else
+                                            <span class="text-base font-bold text-slate-300">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-4 py-3 text-center tabular-nums">
+                                        @if ($row['expired_operating_card'] > 0)
+                                            <a
+                                                href="{{ route('regulatory-documents.index', array_filter(['document_type' => 'كرت تشغيل', 'equipment_type' => $row['raw_equipment_type']])) }}"
+                                                class="inline-flex min-w-12 items-center justify-center rounded-xl bg-amber-100 px-3.5 py-1.5 text-base font-black text-amber-950 ring-1 ring-inset ring-amber-600/35 hover:bg-amber-600 hover:text-white transition"
+                                            >
+                                                {{ number_format($row['expired_operating_card']) }}
+                                            </a>
+                                        @else
+                                            <span class="text-base font-bold text-slate-300">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap bg-slate-100/80 px-5 py-3 text-center tabular-nums">
+                                        <a
+                                            href="{{ route('regulatory-documents.index', array_filter(['equipment_type' => $row['raw_equipment_type']])) }}"
+                                            class="inline-flex min-w-14 items-center justify-center rounded-xl bg-slate-900 px-3.5 py-1.5 text-base font-black text-white hover:bg-emerald-700 transition"
+                                        >
+                                            {{ number_format($row['total']) }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center">
+                                        <p class="text-base font-black text-slate-900">لا توجد أوراق نظامية منتهية لعرضها حالياً</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        @if (count($equipmentSummary['rows'] ?? []) > 0)
+                            <tfoot>
+                                <tr class="border-t-2 border-black bg-sky-100/95 text-base sm:text-lg font-black">
+                                    <td colspan="2" class="border-e-2 border-black px-5 py-4 text-center text-black">
+                                        الإجمالي
+                                    </td>
+                                    <td class="border-e-2 border-black px-4 py-4 text-center text-rose-800 tabular-nums">
+                                        <a href="{{ route('regulatory-documents.index', ['document_type' => 'فحص دوري']) }}" class="hover:underline">
+                                            {{ number_format($equipmentSummary['totals']['expired_inspection'] ?? 0) }}
+                                        </a>
+                                    </td>
+                                    <td class="border-e-2 border-black px-4 py-4 text-center text-purple-900 tabular-nums">
+                                        <a href="{{ route('regulatory-documents.index', ['document_type' => 'استمارة']) }}" class="hover:underline">
+                                            {{ number_format($equipmentSummary['totals']['expired_registration'] ?? 0) }}
+                                        </a>
+                                    </td>
+                                    <td class="border-e-2 border-black px-4 py-4 text-center text-amber-900 tabular-nums">
+                                        <a href="{{ route('regulatory-documents.index', ['document_type' => 'كرت تشغيل']) }}" class="hover:underline">
+                                            {{ number_format($equipmentSummary['totals']['expired_operating_card'] ?? 0) }}
+                                        </a>
+                                    </td>
+                                    <td class="bg-slate-950 px-5 py-4 text-center text-white tabular-nums">
+                                        {{ number_format($equipmentSummary['totals']['total'] ?? 0) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        @endif
+                    </table>
+                </div>
+            </section>
+        @else
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث بكود المعدة، نوع المعدة، رقم اللوحة، الفرع، الرقم التسلسلي، أو الموقف من التجديد..."
             :create-model="\App\Models\RegulatoryDocument::class"
             create-label="إضافة سجل جديد"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">الفرع الحالي</label>
@@ -198,7 +291,7 @@
         </x-module.toolbar>
 
         {{-- Ruled Data Table --}}
-        <div class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-white shadow-md">
             <div x-show="loadingTable" x-cloak class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
                 <span class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg">
                     <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -216,6 +309,7 @@
                 ])
             </div>
         </div>
+        @endif
 
         {{-- Slide-Over Create/Edit Drawer (No Required Fields) --}}
         <x-module.drawer
@@ -348,5 +442,17 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('regulatory-documents.import.direct')"
+            :template-url="route('regulatory-documents.import.template')"
+            title="استيراد وإسقاط بيانات الأوراق النظامية"
+            :hidden-fields="['document_type' => $activeDocumentType ?? '']"
+        />
+        <x-module.purge-modal
+            :action="route('regulatory-documents.purge-all')"
+            :module-name="($activeDocumentType ?? '') !== '' ? 'الأوراق النظامية ('.$activeDocumentType.')' : 'الأوراق النظامية'"
+            :count="$kpis['total'] ?? 0"
+            :hidden-fields="['document_type' => $activeDocumentType ?? '']"
+        />
     </div>
 @endsection

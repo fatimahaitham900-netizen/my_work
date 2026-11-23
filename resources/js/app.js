@@ -50,6 +50,9 @@ window.fleetModuleManager = function fleetModuleManager(config) {
         deleteOpen: false,
         deleteTarget: { id: null, label: '' },
 
+        importModalOpen: false,
+        purgeModalOpen: false,
+
         searchTimer: null,
 
         init() {

@@ -98,6 +98,19 @@ it('seeds all 293 expired regulatory documents across periodic inspection, opera
         ->assertSee('تاريخ الاستمارة (هـ)')
         ->assertSee('MC_000005');
 
+    // Summary page grouped by equipment type across فحص منتهي، استمارات منتهية، كروت منتهية
+    $this->actingAs($admin)
+        ->get(route('regulatory-documents.index', ['view' => 'summary']))
+        ->assertOk()
+        ->assertSee('ملخص الأوراق النظامية المنتهية حسب نوع المعدة')
+        ->assertSee('فحص منتهي')
+        ->assertSee('استمارات منتهية')
+        ->assertSee('كروت منتهية')
+        ->assertSee('131')
+        ->assertSee('82')
+        ->assertSee('80')
+        ->assertSee('293');
+
     // Filter sub-pages & renewal_status via XHR
     $this->actingAs($admin)
         ->withHeaders(['X-Partial' => 'true', 'Accept' => 'application/json'])

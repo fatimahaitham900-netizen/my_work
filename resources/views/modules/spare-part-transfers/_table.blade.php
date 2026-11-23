@@ -7,8 +7,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">المعدة المنقول منها</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">المعدة المنقول إليها</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-amber-500/70 bg-amber-500/20 px-4 py-3.5 text-center text-amber-200">التاريخ</th>
-                <th scope="col" class="min-w-44 border-b-2 border-e border-slate-700 px-4 py-3.5 text-start">ملاحظة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3.5 py-3.5 text-center">الإجراءات</th>
+                <th scope="col" class="min-w-44 border-b-2 border-slate-700 px-4 py-3.5 text-start">ملاحظة</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -47,7 +46,7 @@
                     <td class="whitespace-nowrap border-e border-slate-300 bg-amber-50/40 px-4 py-3.5 text-center font-extrabold text-slate-950 tabular-nums">
                         {{ $transfer->transfer_date?->format('d/m/Y') ?? '—' }}
                     </td>
-                    <td class="min-w-44 border-e border-slate-300 px-4 py-3.5 text-start">
+                    <td class="min-w-44 px-4 py-3.5 text-start">
                         @if ($transfer->notes)
                             <span class="inline-flex items-center rounded-lg bg-sky-50 px-3 py-1 text-xs font-extrabold text-sky-900 ring-1 ring-inset ring-sky-600/25">
                                 {{ $transfer->notes }}
@@ -56,13 +55,10 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="whitespace-nowrap px-3.5 py-3.5 text-center">
-                        <x-module.row-actions :record="$transfer" :label="$transfer->item_description ?: 'عملية نقل قطعة غيار'" />
-                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="6" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد عمليات نقل قطع غيار مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو إضافة عملية نقل جديدة.</p>
                     </td>

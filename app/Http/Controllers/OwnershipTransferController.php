@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\OwnershipTransferStatus;
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\OwnershipTransfers\FilterOwnershipTransfersRequest;
 use App\Http\Requests\OwnershipTransfers\StoreOwnershipTransferRequest;
 use App\Http\Requests\OwnershipTransfers\UpdateOwnershipTransferRequest;
@@ -19,9 +20,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnershipTransferController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly OwnershipTransferService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'ownership-transfers';
+    }
+
+    protected function importModelClass(): string
+    {
+        return OwnershipTransfer::class;
+    }
 
     public function index(FilterOwnershipTransfersRequest $request): View|JsonResponse
     {

@@ -69,9 +69,20 @@
         x-data="{
             ...fleetModuleManager(@js($moduleConfig)),
             viewMode: @js($filters['view_mode'] ?? 'list'),
+            importModalOpen: false,
+            purgeModalOpen: false,
+            drillDownByStatus(status, workshop = '') {
+                this.filters.workshop_status = status;
+                this.filters.brand = '';
+                this.filters.equipment_name = '';
+                this.filters.workshop_name = workshop;
+                this.viewMode = 'list';
+                this.applyFilters();
+            },
             drillDownByBrand(brand, workshop = '') {
                 this.filters.brand = brand;
                 this.filters.equipment_name = '';
+                this.filters.workshop_status = '';
                 this.filters.workshop_name = workshop;
                 this.viewMode = 'list';
                 this.applyFilters();
@@ -79,6 +90,7 @@
             drillDownByEquipmentName(equipmentName, workshop = '') {
                 this.filters.equipment_name = equipmentName;
                 this.filters.brand = '';
+                this.filters.workshop_status = '';
                 this.filters.workshop_name = workshop;
                 this.viewMode = 'list';
                 this.applyFilters();
@@ -86,12 +98,14 @@
         }"
         class="space-y-5"
     >
+        {{-- Daily Import Preview & Comparison Panel (يظهر عند وجود ملف مرفوع للمعاينة) --}}
+        @include('modules.equipment-breakdowns._import_preview', ['preview' => $importPreview ?? null])
         {{-- View Mode Switcher Bar (طريقة العرض) --}}
         <section class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="text-sm sm:text-base font-extrabold text-slate-900">طريقة العرض</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">بدّل بين الجدول التفصيلي، أو ملخص الورش والأعداد حسب النوع، أو حسب نوع المعدة</p>
+                    <p class="text-xs text-slate-500 mt-0.5">بدّل بين الجدول التفصيلي، أو ملخص الورش والأعداد حسب الموقف والنسبة، أو حسب نوع المعدة</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
@@ -109,13 +123,13 @@
 
                     <button
                         type="button"
-                        @click="viewMode = 'by_brand'"
-                        :class="viewMode === 'by_brand' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white'"
+                        @click="viewMode = 'by_status'"
+                        :class="viewMode === 'by_status' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white'"
                         class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition cursor-pointer"
                     >
-                        <span>عرض حسب النوع (النوع × الورش)</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums" :class="viewMode === 'by_brand' ? 'bg-emerald-500/30 text-emerald-100' : 'bg-slate-200/80 text-slate-700'">
-                            {{ count($brandMatrix['rows']) }}
+                        <span>عرض حسب الموقف (الموقف × الورش)</span>
+                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums" :class="viewMode === 'by_status' ? 'bg-emerald-500/30 text-emerald-100' : 'bg-slate-200/80 text-slate-700'">
+                            {{ count($statusMatrix['rows']) }}
                         </span>
                     </button>
 
@@ -134,31 +148,36 @@
             </div>
         </section>
 
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-bold text-slate-600">إجمالي الأعطال</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-4 shadow-xs">
-                <p class="text-xs font-bold text-rose-700">أعطال ثقيلة (حرجة)</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-rose-700 tabular-nums" x-text="kpis.critical">{{ $kpis['critical'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 shadow-xs">
-                <p class="text-xs font-bold text-amber-800">دعم مالي / قطع / تسعير</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-amber-800 tabular-nums" x-text="kpis.spare_parts_delay">{{ $kpis['spare_parts_delay'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-4 shadow-xs">
-                <p class="text-xs font-bold text-emerald-800">تم الإصلاح</p>
-                <p class="mt-1.5 text-2xl font-extrabold text-emerald-800 tabular-nums" x-text="kpis.repaired">{{ $kpis['repaired'] }}</p>
-            </div>
-        </section>
-
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث بالمعدة، النوع، الكود، الورشة، العطل، الموقف، أو الملاحظات..."
             :create-model="\App\Models\EquipmentBreakdown::class"
         >
+            <x-slot:actions>
+                @can('create', \App\Models\EquipmentBreakdown::class)
+                    <button
+                        type="button"
+                        @click="purgeModalOpen = true"
+                        class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-2.5 text-xs font-bold text-rose-800 hover:bg-rose-100 transition cursor-pointer"
+                    >
+                        <svg class="h-4 w-4 text-rose-700" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                        <span>حذف جميع البيانات</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="importModalOpen = true"
+                        class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-2.5 text-xs font-bold text-indigo-900 hover:bg-indigo-100 transition cursor-pointer"
+                    >
+                        <svg class="h-4 w-4 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                        <span>تحديث يومي (CSV/Excel)</span>
+                    </button>
+                @endcan
+            </x-slot:actions>
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">الورشة</label>
                 <select x-model="filters.workshop_name" @change="applyFilters()" class="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-slate-900 focus:outline-none">
@@ -230,89 +249,114 @@
             </div>
         </x-module.toolbar>
 
-        {{-- Pivot View 1: By Brand x Workshops (عرض حسب النوع والورش) --}}
+        {{-- Pivot View 1: By Status x Workshops + Percentage (عرض حسب الموقف والورش والنسبة) --}}
         <div
-            x-show="viewMode === 'by_brand'"
+            x-show="viewMode === 'by_status'"
             x-cloak
-            class="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm"
+            class="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-md"
         >
-            <div class="bg-slate-900 px-6 py-4 text-center text-lg sm:text-xl font-black text-white">
-                توزيع المعدات المتعطلة حسب النوع والورش (اضغط على أي رقم لعرض المعدات)
+            <div class="bg-slate-950 px-6 py-4 text-center text-lg sm:text-xl font-black text-white">
+                توزيع المعدات المتعطلة حسب الموقف والورش والنسبة من الإجمالي (اضغط على أي رقم لعرض المعدات)
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full border-collapse text-center text-sm">
                     <thead>
-                        <tr class="border-b-2 border-black bg-sky-100/80">
-                            <th scope="col" class="border-e-2 border-black px-3 py-3 text-center font-black text-black">م</th>
-                            <th scope="col" class="border-e-2 border-black px-4 py-3 text-start font-black text-black">النوع</th>
-                            @foreach ($brandMatrix['workshops'] as $workshop)
-                                <th scope="col" class="border-e-2 border-black px-3 py-3 text-center font-black text-black">{{ $workshop }}</th>
+                        <tr class="border-b-2 border-black bg-sky-100/90">
+                            <th scope="col" class="border-e-2 border-black px-3 py-3.5 text-center font-black text-black">م</th>
+                            <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-start font-black text-black">الموقف</th>
+                            @foreach ($statusMatrix['workshops'] as $workshop)
+                                <th scope="col" class="border-e-2 border-black px-3 py-3.5 text-center font-black text-black">{{ $workshop }}</th>
                             @endforeach
-                            <th scope="col" class="bg-slate-200/80 px-3.5 py-3 text-center font-black text-rose-700">الإجمالي</th>
+                            <th scope="col" class="border-e-2 border-black bg-rose-100/80 px-4 py-3.5 text-center font-black text-rose-800">عدد المعدات</th>
+                            <th scope="col" class="bg-emerald-100/80 px-4 py-3.5 text-center font-black text-emerald-900">النسبة من الإجمالي</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
-                        @foreach ($brandMatrix['rows'] as $index => $row)
-                            <tr class="border-b border-slate-300 even:bg-slate-50/70 hover:bg-sky-50/50 transition-colors">
-                                <td class="whitespace-nowrap border-e-2 border-black px-3 py-3 font-extrabold text-slate-700 tabular-nums">
+                        @foreach ($statusMatrix['rows'] as $index => $row)
+                            @php
+                                $wsLabel = $row['label'];
+                                $wsBadge = match (true) {
+                                    str_contains($wsLabel, 'دعم مالي') => 'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-600/30',
+                                    str_contains($wsLabel, 'متوقف تسعير') => 'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-600/30',
+                                    str_contains($wsLabel, 'توريد قطع') => 'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-600/30',
+                                    str_contains($wsLabel, 'قيد') => 'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-600/30',
+                                    str_contains($wsLabel, 'كشف') => 'bg-indigo-100 text-indigo-900 ring-1 ring-inset ring-indigo-600/30',
+                                    str_contains($wsLabel, 'نقل') => 'bg-purple-100 text-purple-900 ring-1 ring-inset ring-purple-600/30',
+                                    str_contains($wsLabel, 'مؤجل') => 'bg-slate-200 text-slate-900 ring-1 ring-inset ring-slate-500/30',
+                                    default => 'bg-slate-100 text-slate-900',
+                                };
+                            @endphp
+                            <tr class="border-b-2 border-slate-800 even:bg-slate-50/80 hover:bg-sky-50/60 transition-colors">
+                                <td class="whitespace-nowrap border-e-2 border-black px-3 py-3 font-black text-slate-900 tabular-nums">
                                     {{ $index + 1 }}
                                 </td>
-                                <td class="whitespace-nowrap border-e-2 border-black px-4 py-3 text-start font-black text-slate-950">
+                                <td class="whitespace-nowrap border-e-2 border-black px-4 py-3 text-start">
                                     <button
                                         type="button"
-                                        @click="drillDownByBrand(@js($row['raw_value']))"
-                                        class="hover:text-blue-700 hover:underline cursor-pointer"
+                                        @click="drillDownByStatus(@js($row['raw_value']))"
+                                        class="inline-flex items-center rounded-full px-3 py-1 text-xs sm:text-sm font-black {{ $wsBadge }} hover:opacity-85 transition cursor-pointer"
                                     >
-                                        {{ $row['label'] }}
+                                        {{ $wsLabel }}
                                     </button>
                                 </td>
-                                @foreach ($brandMatrix['workshops'] as $workshop)
+                                @foreach ($statusMatrix['workshops'] as $workshop)
                                     @php $cellCount = $row['counts'][$workshop] ?? 0; @endphp
                                     <td class="whitespace-nowrap border-e-2 border-black px-3 py-2.5 tabular-nums">
                                         @if ($cellCount > 0)
                                             <button
                                                 type="button"
-                                                @click="drillDownByBrand(@js($row['raw_value']), @js($workshop))"
+                                                @click="drillDownByStatus(@js($row['raw_value']), @js($workshop))"
                                                 class="inline-flex min-w-9 items-center justify-center rounded-xl bg-blue-50 px-2.5 py-1 text-base font-black text-blue-700 ring-1 ring-inset ring-blue-600/30 hover:bg-blue-600 hover:text-white transition cursor-pointer"
-                                                title="عرض {{ $row['label'] }} في {{ $workshop }}"
+                                                title="عرض {{ $wsLabel }} في {{ $workshop }}"
                                             >
                                                 {{ $cellCount }}
                                             </button>
                                         @else
-                                            <span class="text-slate-300">—</span>
+                                            <span class="font-bold text-slate-300">—</span>
                                         @endif
                                     </td>
                                 @endforeach
-                                <td class="whitespace-nowrap bg-rose-50/50 px-3.5 py-2.5 tabular-nums">
+                                <td class="whitespace-nowrap border-e-2 border-black bg-rose-50/50 px-4 py-2.5 tabular-nums">
                                     <button
                                         type="button"
-                                        @click="drillDownByBrand(@js($row['raw_value']))"
-                                        class="inline-flex min-w-10 items-center justify-center rounded-xl bg-rose-100 px-2.5 py-1 text-base font-black text-rose-700 ring-1 ring-inset ring-rose-600/30 hover:bg-rose-600 hover:text-white transition cursor-pointer"
+                                        @click="drillDownByStatus(@js($row['raw_value']))"
+                                        class="inline-flex min-w-11 items-center justify-center rounded-xl bg-rose-100 px-3 py-1 text-base font-black text-rose-800 ring-1 ring-inset ring-rose-600/35 hover:bg-rose-600 hover:text-white transition cursor-pointer"
                                     >
                                         {{ $row['total'] }}
                                     </button>
+                                </td>
+                                <td class="whitespace-nowrap bg-emerald-50/40 px-4 py-2.5 tabular-nums">
+                                    <div class="flex flex-col items-center gap-1 min-w-24">
+                                        <span class="text-base font-black text-emerald-900">{{ number_format($row['percentage'], 1) }}%</span>
+                                        <div class="h-2 w-24 overflow-hidden rounded-full bg-slate-200">
+                                            <div class="h-full rounded-full bg-emerald-600" style="width: {{ min(100, $row['percentage']) }}%"></div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-black bg-sky-100/90">
-                            <td colspan="2" class="border-e-2 border-black px-4 py-3 text-center text-base font-black text-black">
+                            <td colspan="2" class="border-e-2 border-black px-4 py-3.5 text-center text-base font-black text-black">
                                 الإجمالي
                             </td>
-                            @foreach ($brandMatrix['workshops'] as $workshop)
-                                <td class="border-e-2 border-black px-3 py-3 tabular-nums">
+                            @foreach ($statusMatrix['workshops'] as $workshop)
+                                <td class="border-e-2 border-black px-3 py-3.5 tabular-nums">
                                     <button
                                         type="button"
-                                        @click="drillDownByBrand('', @js($workshop))"
+                                        @click="drillDownByStatus('', @js($workshop))"
                                         class="text-base sm:text-lg font-black text-slate-950 hover:text-blue-700 hover:underline cursor-pointer"
                                     >
-                                        {{ $brandMatrix['column_totals'][$workshop] ?? 0 }}
+                                        {{ $statusMatrix['column_totals'][$workshop] ?? 0 }}
                                     </button>
                                 </td>
                             @endforeach
-                            <td class="bg-rose-600 px-3.5 py-3 text-base sm:text-lg font-black text-white tabular-nums">
-                                {{ $brandMatrix['grand_total'] }}
+                            <td class="border-e-2 border-black bg-rose-600 px-4 py-3.5 text-base sm:text-lg font-black text-white tabular-nums">
+                                {{ $statusMatrix['grand_total'] }}
+                            </td>
+                            <td class="bg-emerald-700 px-4 py-3.5 text-base sm:text-lg font-black text-white tabular-nums">
+                                100%
                             </td>
                         </tr>
                     </tfoot>
@@ -333,25 +377,25 @@
                 <table class="min-w-full border-collapse text-center text-sm">
                     <thead>
                         <tr class="border-b-2 border-black bg-sky-100/80">
-                            <th scope="col" class="border-e-2 border-black px-3 py-3 text-center font-black text-black">م</th>
-                            <th scope="col" class="border-e-2 border-black px-4 py-3 text-start font-black text-black">نوع المعدة</th>
+                            <th scope="col" class="border-e-2 border-black px-3 py-3 text-center text-base font-black text-black">م</th>
+                            <th scope="col" class="border-e-2 border-black px-4 py-3 text-center text-base font-black text-black">نوع المعدة</th>
                             @foreach ($equipmentMatrix['workshops'] as $workshop)
-                                <th scope="col" class="border-e-2 border-black px-3 py-3 text-center font-black text-black">{{ $workshop }}</th>
+                                <th scope="col" class="border-e-2 border-black px-3 py-3 text-center text-base font-black text-black">{{ $workshop }}</th>
                             @endforeach
-                            <th scope="col" class="bg-slate-200/80 px-3.5 py-3 text-center font-black text-rose-700">الإجمالي</th>
+                            <th scope="col" class="bg-slate-200/80 px-3.5 py-3 text-center text-base font-black text-rose-700">الإجمالي</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
                         @foreach ($equipmentMatrix['rows'] as $index => $row)
-                            <tr class="border-b border-slate-300 even:bg-slate-50/70 hover:bg-sky-50/50 transition-colors">
-                                <td class="whitespace-nowrap border-e-2 border-black px-3 py-3 font-extrabold text-slate-700 tabular-nums">
+                            <tr class="border-b-2 border-slate-800 even:bg-slate-50/70 hover:bg-sky-50/50 transition-colors">
+                                <td class="whitespace-nowrap border-e-2 border-black px-3 py-3 text-base font-black text-slate-900 tabular-nums">
                                     {{ $index + 1 }}
                                 </td>
-                                <td class="whitespace-nowrap border-e-2 border-black px-4 py-3 text-start font-black text-slate-950">
+                                <td class="whitespace-nowrap border-e-2 border-black px-4 py-3 text-center text-base sm:text-lg font-black text-slate-950">
                                     <button
                                         type="button"
                                         @click="drillDownByEquipmentName(@js($row['raw_value']))"
-                                        class="hover:text-emerald-700 hover:underline cursor-pointer"
+                                        class="w-full text-center font-black text-slate-950 hover:text-emerald-700 hover:underline cursor-pointer"
                                     >
                                         {{ $row['label'] }}
                                     </button>
@@ -595,5 +639,7 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        @include('modules.equipment-breakdowns._import_modal')
+        @include('modules.equipment-breakdowns._purge_modal')
     </div>
 @endsection

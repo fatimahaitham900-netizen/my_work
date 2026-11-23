@@ -63,6 +63,8 @@ class FinancialSupportTransfer extends Model
     {
         return $query->where(function (Builder $sub): void {
             $sub->where('repair_status', 'like', '%لم يتم الاصلاح%')
+                ->orWhere('repair_status', 'like', '%لم يتم الإصلاح%')
+                ->orWhere('repair_status', 'like', '%لم يتم اصلاح%')
                 ->orWhere('repair_status', 'like', '%مازال متعطل%');
         });
     }

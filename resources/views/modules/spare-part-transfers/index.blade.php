@@ -64,6 +64,7 @@
             search-placeholder="ابحث بالبند، المعدة المنقول منها، المعدة المنقول إليها، أو الملاحظات..."
             :create-model="\App\Models\SparePartTransfer::class"
             create-label="إضافة عملية نقل جديدة"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">المعدة المنقول منها</label>
@@ -171,6 +172,16 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('spare-part-transfers.import.direct')"
+            :template-url="route('spare-part-transfers.import.template')"
+            title="استيراد وإسقاط بيانات نقل قطع الغيار"
+        />
+        <x-module.purge-modal
+            :action="route('spare-part-transfers.purge-all')"
+            module-name="نقل قطع غيار بدون تعميد الإدارة"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection
 

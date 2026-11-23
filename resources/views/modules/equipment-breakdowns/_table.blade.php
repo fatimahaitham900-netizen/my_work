@@ -14,8 +14,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">الموقف</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">المبلغ</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ الإصلاح</th>
-                <th scope="col" class="min-w-64 border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-start">ملاحظات الموقف</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3 py-3.5 text-center">الإجراءات</th>
+                <th scope="col" class="min-w-64 border-b-2 border-slate-700 px-3.5 py-3.5 text-start">ملاحظات الموقف</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -119,34 +118,15 @@
                         @endif
                     </td>
                     <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center font-bold text-slate-900 tabular-nums">
-                        {{ $breakdown->expected_repair_date?->format('d/m/Y') ?? '—' }}
+                        {{ $breakdown->expected_repair_date_display }}
                     </td>
-                    <td class="min-w-64 max-w-md border-e border-slate-300 px-3.5 py-3 text-start text-xs font-bold leading-relaxed text-slate-800">
+                    <td class="min-w-64 max-w-md px-3.5 py-3 text-start text-xs font-bold leading-relaxed text-slate-800">
                         {{ $breakdown->notes ?: '—' }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-center">
-                        <x-module.row-actions :record="$breakdown" :label="$breakdown->equipment_code ?: ($breakdown->equipment_name ?: 'سجل عطل')">
-                            @if ($breakdown->repair_status !== \App\Enums\RepairStatus::Repaired)
-                                @can('update', $breakdown)
-                                    <button
-                                        type="button"
-                                        data-action="mark-repaired"
-                                        data-id="{{ $breakdown->id }}"
-                                        title="تسجيل إتمام الإصلاح"
-                                        class="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition cursor-pointer"
-                                    >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                        </svg>
-                                    </button>
-                                @endcan
-                            @endif
-                        </x-module.row-actions>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="14" class="px-6 py-12 text-center">
+                    <td colspan="13" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد أعطال معدات مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو تسجيل عطل جديد.</p>
                     </td>

@@ -28,6 +28,7 @@ class CarBreakdownService
         if ($search !== '') {
             $query->where(function (Builder $subQuery) use ($search): void {
                 $subQuery->where('car_code', 'like', "%{$search}%")
+                    ->orWhere('vehicle_category', 'like', "%{$search}%")
                     ->orWhere('car_type', 'like', "%{$search}%")
                     ->orWhere('plate_number', 'like', "%{$search}%")
                     ->orWhere('model_year', 'like', "%{$search}%")
@@ -41,7 +42,7 @@ class CarBreakdownService
             });
         }
 
-        foreach (['branch', 'department', 'fuel_type', 'model_year'] as $column) {
+        foreach (['vehicle_category', 'branch', 'department', 'fuel_type', 'model_year'] as $column) {
             $value = trim((string) ($filters[$column] ?? ''));
             if ($value !== '') {
                 $query->where($column, $value);
@@ -113,7 +114,10 @@ class CarBreakdownService
      */
     public function create(array $data): CarBreakdown
     {
-        return CarBreakdown::query()->create($data);
+        $car = CarBreakdown::query()->create($data);
+        DashboardService::clearCache();
+
+        return $car;
     }
 
     /**
@@ -122,6 +126,7 @@ class CarBreakdownService
     public function update(CarBreakdown $carBreakdown, array $data): CarBreakdown
     {
         $carBreakdown->update($data);
+        DashboardService::clearCache();
 
         return $carBreakdown->refresh();
     }
@@ -129,6 +134,7 @@ class CarBreakdownService
     public function delete(CarBreakdown $carBreakdown): void
     {
         $carBreakdown->delete();
+        DashboardService::clearCache();
     }
 
     /**
@@ -141,6 +147,7 @@ class CarBreakdownService
         $headers = [
             'م',
             'كود السيارة',
+            'التصنيف',
             'نوع السيارة',
             'اللوحة',
             'موديل',
@@ -156,6 +163,7 @@ class CarBreakdownService
         $rows = $records->values()->map(static fn (CarBreakdown $item, int $index): array => [
             $index + 1,
             $item->car_code,
+            $item->vehicle_category ?: CarBreakdown::CATEGORY_CAR,
             $item->car_type,
             $item->plate_number,
             $item->model_year,
@@ -195,7 +203,8 @@ class CarBreakdownService
                 ? 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20'
                 : 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20',
             'fields' => [
-                ['label' => 'كود السيارة', 'value' => $carBreakdown->car_code ?: '—'],
+                ['label' => 'كود المركبة', 'value' => $carBreakdown->car_code ?: '—'],
+                ['label' => 'التصنيف', 'value' => $carBreakdown->vehicle_category ?: CarBreakdown::CATEGORY_CAR],
                 ['label' => 'نوع السيارة', 'value' => $carBreakdown->car_type ?: '—'],
                 ['label' => 'اللوحة', 'value' => $carBreakdown->plate_number ?: '—'],
                 ['label' => 'موديل', 'value' => $carBreakdown->model_year ?: '—'],
@@ -210,6 +219,7 @@ class CarBreakdownService
             'record' => [
                 'id' => $carBreakdown->id,
                 'car_code' => $carBreakdown->car_code ?? '',
+                'vehicle_category' => $carBreakdown->vehicle_category ?: CarBreakdown::CATEGORY_CAR,
                 'car_type' => $carBreakdown->car_type ?? '',
                 'plate_number' => $carBreakdown->plate_number ?? '',
                 'model_year' => $carBreakdown->model_year ?? '',

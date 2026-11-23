@@ -10,8 +10,7 @@
                 <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة الصيانة اليومية</th>
                 <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة الصيانة الوقائية</th>
                 <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة انحراف الصيانة اليومية</th>
-                <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة انحراف الصيانة الوقائية</th>
-                <th scope="col" class="px-3 py-3.5 text-center font-black">الإجراءات</th>
+                <th scope="col" class="px-4 py-3.5 text-center font-black">نسبة انحراف الصيانة الوقائية</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -200,7 +199,7 @@
                         @if ($canEditRows)
                             @click="if (!inlineEditing) { inlineEditing = true; }"
                         @endif
-                        class="whitespace-nowrap border-e-2 border-black px-3 py-2.5 font-black {{ $isOnLeave ? 'text-black' : 'text-rose-700' }} tabular-nums {{ $canEditRows ? 'cursor-pointer' : '' }}"
+                        class="whitespace-nowrap px-3 py-2.5 font-black {{ $isOnLeave ? 'text-black' : 'text-rose-700' }} tabular-nums {{ $canEditRows ? 'cursor-pointer' : '' }}"
                     >
                         <template x-if="!inlineEditing">
                             <span>
@@ -214,7 +213,7 @@
                             </span>
                         </template>
                         <template x-if="inlineEditing">
-                            <div @click.stop>
+                            <div class="inline-flex items-center justify-center gap-1.5" @click.stop>
                                 <input
                                     x-show="rowType === 'active'"
                                     type="number"
@@ -232,51 +231,28 @@
                                     @keydown.enter.prevent="saveInline()"
                                     class="w-44 rounded-lg border border-slate-400 bg-white px-2.5 py-1 text-center text-xs font-bold text-black focus:outline-none"
                                 >
-                            </div>
-                        </template>
-                    </td>
-
-                    {{-- الإجراءات --}}
-                    <td class="whitespace-nowrap px-3 py-2 text-center">
-                        <template x-if="inlineEditing">
-                            <div class="inline-flex items-center gap-1.5" @click.stop>
                                 <button
                                     type="button"
                                     @click="saveInline()"
                                     :disabled="savingInline"
-                                    class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-black text-white hover:bg-emerald-700 transition cursor-pointer"
+                                    class="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-black text-white hover:bg-emerald-700 transition cursor-pointer"
                                 >
                                     حفظ
                                 </button>
                                 <button
                                     type="button"
                                     @click="inlineEditing = false"
-                                    class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                                    class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                                 >
                                     إلغاء
                                 </button>
-                            </div>
-                        </template>
-                        <template x-if="!inlineEditing">
-                            <div class="inline-flex items-center justify-center gap-1.5">
-                                @if ($canEditRows)
-                                    <button
-                                        type="button"
-                                        @click="inlineEditing = true"
-                                        class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-extrabold text-slate-800 hover:border-slate-900 hover:bg-slate-900 hover:text-white transition cursor-pointer"
-                                        title="تعديل مباشر في نفس الصف"
-                                    >
-                                        {{ $isEmptyActive ? 'إدخال' : 'تعديل' }}
-                                    </button>
-                                @endif
-                                <x-module.row-actions :record="$item" :label="'انحراف الصيانات — يوم '.($item->day_number ?? $item->id)" />
                             </div>
                         </template>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
+                    <td colspan="5" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد سجلات مطابقة</p>
                     </td>
                 </tr>
@@ -289,8 +265,7 @@
                     <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 tabular-nums">{{ $summary['daily_maintenance_rate'] }}%</td>
                     <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 tabular-nums">{{ $summary['preventive_maintenance_rate'] }}%</td>
                     <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 text-blue-800 tabular-nums">{{ $summary['daily_deviation_rate'] }}%</td>
-                    <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 text-rose-700 tabular-nums">{{ $summary['preventive_deviation_rate'] }}%</td>
-                    <td class="px-3 py-3.5"></td>
+                    <td class="whitespace-nowrap px-4 py-3.5 text-rose-700 tabular-nums">{{ $summary['preventive_deviation_rate'] }}%</td>
                 </tr>
             </tfoot>
         @endif

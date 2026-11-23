@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\DriverStoppageStatus;
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\BreakdownStoppages\FilterBreakdownDriverStoppagesRequest;
 use App\Http\Requests\BreakdownStoppages\StoreBreakdownDriverStoppageRequest;
 use App\Http\Requests\BreakdownStoppages\UpdateBreakdownDriverStoppageRequest;
@@ -19,14 +20,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BreakdownDriverStoppageController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly BreakdownDriverStoppageService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'breakdown-stoppages';
+    }
+
+    protected function importModelClass(): string
+    {
+        return BreakdownDriverStoppage::class;
+    }
 
     public function index(FilterBreakdownDriverStoppagesRequest $request): View|JsonResponse
     {
         $filters = $request->filters();
         $records = $this->service->paginate($filters);
+        $breakdownsByCode = $this->service->breakdownsByNormalizedCode($records);
         $kpis = $this->service->kpis();
 
         if ($request->header('X-Partial') === 'true' || $request->expectsJson()) {
@@ -34,6 +48,7 @@ class BreakdownDriverStoppageController extends Controller
                 'kpis' => $kpis,
                 'table_html' => view('modules.breakdown-stoppages._table', [
                     'records' => $records,
+                    'breakdownsByCode' => $breakdownsByCode,
                 ])->render(),
                 'export_url' => route('breakdown-stoppages.export', array_filter($filters, static fn (mixed $v): bool => $v !== null && $v !== '')),
                 'total' => $records->total(),
@@ -42,6 +57,7 @@ class BreakdownDriverStoppageController extends Controller
 
         return view('modules.breakdown-stoppages.index', [
             'records' => $records,
+            'breakdownsByCode' => $breakdownsByCode,
             'kpis' => $kpis,
             'filters' => $filters,
             'statuses' => DriverStoppageStatus::cases(),

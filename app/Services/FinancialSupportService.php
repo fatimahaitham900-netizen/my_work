@@ -162,8 +162,20 @@ class FinancialSupportService
             ->get()
             ->keyBy('support_month');
 
-        return $this->monthSummaries()->map(static function (FinancialSupportMonth $month) use ($countsByMonth): array {
+        $underRepairByMonth = FinancialSupportTransfer::query()
+            ->where(static function (Builder $sub): void {
+                $sub->where('repair_status', 'like', '%لم يتم الاصلاح%')
+                    ->orWhere('repair_status', 'like', '%لم يتم الإصلاح%')
+                    ->orWhere('repair_status', 'like', '%لم يتم اصلاح%');
+            })
+            ->selectRaw('support_month, COUNT(*) as under_repair_rows')
+            ->groupBy('support_month')
+            ->pluck('under_repair_rows', 'support_month');
+
+        return $this->monthSummaries()->map(static function (FinancialSupportMonth $month) use ($countsByMonth, $underRepairByMonth): array {
             $stats = $countsByMonth->get($month->month);
+            $liveUnderRepair = (int) ($underRepairByMonth[$month->month] ?? 0);
+            $effectiveUnderRepair = max((int) $month->under_repair_count, $liveUnderRepair);
 
             return [
                 'id' => $month->id,
@@ -178,7 +190,7 @@ class FinancialSupportService
                 'not_transferred_amount' => $month->not_transferred_amount !== null ? (float) $month->not_transferred_amount : null,
                 'total_equipment_count' => (int) $month->total_equipment_count,
                 'repaired_count' => (int) $month->repaired_count,
-                'under_repair_count' => (int) $month->under_repair_count,
+                'under_repair_count' => $effectiveUnderRepair,
             ];
         })->values()->all();
     }
@@ -204,6 +216,12 @@ class FinancialSupportService
     {
         $tabs = $this->monthTabs();
 
+        // Hide months 8 and 9 unless an unrepaired equipment appears in their sheet
+        $visibleRows = array_values(array_filter(
+            $tabs,
+            static fn (array $row): bool => ! in_array((int) $row['month'], [8, 9], true) || (int) $row['under_repair_count'] > 0,
+        ));
+
         $totals = [
             'repair_support_amount' => 0.0,
             'custody_amount' => 0.0,
@@ -214,7 +232,7 @@ class FinancialSupportService
             'under_repair_count' => 0,
         ];
 
-        foreach ($tabs as $row) {
+        foreach ($visibleRows as $row) {
             $totals['repair_support_amount'] += $row['repair_support_amount'];
             $totals['custody_amount'] += $row['custody_amount'];
             $totals['total_amount'] += $row['total_amount'];
@@ -226,7 +244,7 @@ class FinancialSupportService
 
         return [
             'title' => 'موقف الدعم المالي للمعدات 2026',
-            'rows' => $tabs,
+            'rows' => $visibleRows,
             'totals' => $totals,
         ];
     }
@@ -284,6 +302,17 @@ class FinancialSupportService
     public function updateMonth(FinancialSupportMonth $month, array $data): FinancialSupportMonth
     {
         $month->update($data);
+        DashboardService::clearCache();
+
+        return $month->refresh();
+    }
+
+    public function updateMonthCustody(FinancialSupportMonth $month, float $custodyAmount): FinancialSupportMonth
+    {
+        $month->update([
+            'custody_amount' => $custodyAmount,
+        ]);
+        DashboardService::clearCache();
 
         return $month->refresh();
     }

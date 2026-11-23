@@ -10,12 +10,12 @@
 
         $spanClasses = [
             'lg:col-span-2' => 'lg:col-span-2',
-            'lg:col-span-3' => 'lg:col-span-3',
-            'lg:col-span-4' => 'lg:col-span-4',
+            'lg:col-span-3' => 'lg:col-span-2',
+            'lg:col-span-4' => 'lg:col-span-2',
             'sm:col-span-2 lg:col-span-4' => 'sm:col-span-2 lg:col-span-4',
-            'sm:col-span-2 lg:col-span-6' => 'sm:col-span-2 lg:col-span-6',
-            'sm:col-span-2 lg:col-span-8' => 'sm:col-span-2 lg:col-span-8',
-            'sm:col-span-2 lg:col-span-12' => 'sm:col-span-2 lg:col-span-12',
+            'sm:col-span-2 lg:col-span-6' => 'sm:col-span-2 lg:col-span-4',
+            'sm:col-span-2 lg:col-span-8' => 'sm:col-span-2 lg:col-span-4',
+            'sm:col-span-2 lg:col-span-12' => 'sm:col-span-2 lg:col-span-10',
         ];
 
         $colorClasses = [
@@ -65,15 +65,15 @@
             </div>
         </section>
 
-        {{-- Executive Ruled Summary Boxes (4 Columns Per Row — High-Contrast TV Display) --}}
+        {{-- Executive Ruled Summary Boxes (5 Columns Per Row — High-Contrast TV Display) --}}
         <section aria-label="ملخص إجمالي الأعداد لجميع المحاور">
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-10">
                 @foreach ($executiveCards as $card)
-                    <div class="{{ $spanClasses[$card['span'] ?? 'lg:col-span-3'] ?? 'lg:col-span-3' }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+                    <div class="{{ $spanClasses[$card['span'] ?? 'lg:col-span-3'] ?? 'lg:col-span-2' }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
                         {{-- Dark Navy Header Bar --}}
                         <a
                             href="{{ route($card['route'], $card['route_params'] ?? []) }}"
-                            class="flex min-h-[68px] items-center justify-center bg-slate-900 px-3.5 py-3.5 text-center text-xl sm:text-2xl font-black leading-snug tracking-tight text-white group-hover:bg-black transition-colors"
+                            class="flex min-h-[64px] items-center justify-center bg-slate-900 px-3 py-3 text-center text-base sm:text-lg xl:text-xl font-black leading-snug tracking-tight text-white group-hover:bg-black transition-colors"
                         >
                             <span>{{ $card['title'] }}</span>
                         </a>
@@ -83,7 +83,7 @@
                             <thead>
                                 <tr class="border-b-2 border-black bg-slate-100/80">
                                     @foreach ($card['cells'] as $cell)
-                                        <th scope="col" class="border-e-2 border-black last:border-e-0 px-3 py-3 text-center text-lg sm:text-xl font-black text-black">
+                                        <th scope="col" class="border-e-2 border-black last:border-e-0 px-2.5 py-2.5 text-center text-sm sm:text-base font-black text-black">
                                             {{ $cell['label'] }}
                                         </th>
                                     @endforeach
@@ -205,7 +205,108 @@
 
         {{-- Executive Financial Support Summary Table (موقف الدعم المالي للمعدات 2026) --}}
         @if ($financialSupport && count($financialSupport['rows'] ?? []) > 0)
-            <section aria-label="موقف الدعم المالي للمعدات 2026">
+            @php
+                $canEditCustody = (bool) auth()->user()?->canManageDeviations();
+                $financialRowsState = collect($financialSupport['rows'])->map(static fn (array $r): array => [
+                    'id' => (int) $r['id'],
+                    'repair_support_amount' => (float) $r['repair_support_amount'],
+                    'custody_amount' => (float) $r['custody_amount'],
+                    'draft' => (string) round((float) $r['custody_amount']),
+                    'editing' => false,
+                    'saving' => false,
+                    'update_url' => route('financial-support.months.custody.update', $r['id']),
+                ])->values()->all();
+            @endphp
+            <section
+                aria-label="موقف الدعم المالي للمعدات 2026"
+                x-data="{
+                    canEdit: @js($canEditCustody),
+                    rows: @js($financialRowsState),
+                    parseAmount(val) {
+                        const cleaned = String(val ?? '').replace(/,/g, '').trim();
+                        const num = parseFloat(cleaned);
+                        return Number.isFinite(num) && num >= 0 ? num : 0;
+                    },
+                    effectiveCustody(index) {
+                        const row = this.rows[index];
+                        if (!row) return 0;
+                        return row.editing ? this.parseAmount(row.draft) : Number(row.custody_amount || 0);
+                    },
+                    rowTotal(index) {
+                        const row = this.rows[index];
+                        if (!row) return 0;
+                        return Number(row.repair_support_amount || 0) + this.effectiveCustody(index);
+                    },
+                    totalCustody() {
+                        return this.rows.reduce((sum, _, idx) => sum + this.effectiveCustody(idx), 0);
+                    },
+                    totalGrandAmount() {
+                        return this.rows.reduce((sum, _, idx) => sum + this.rowTotal(idx), 0);
+                    },
+                    formatNumber(val) {
+                        return Math.round(Number(val) || 0).toLocaleString('en-US');
+                    },
+                    startEdit(index) {
+                        if (!this.canEdit) return;
+                        this.rows.forEach((r, i) => {
+                            if (i !== index) {
+                                r.editing = false;
+                                r.draft = String(Math.round(Number(r.custody_amount || 0)));
+                            }
+                        });
+                        const row = this.rows[index];
+                        row.draft = String(Math.round(Number(row.custody_amount || 0)));
+                        row.editing = true;
+                        this.$nextTick(() => {
+                            const input = this.$el.querySelector(`[data-custody-input='${index}']`);
+                            if (input) {
+                                input.focus();
+                                input.select();
+                            }
+                        });
+                    },
+                    cancelEdit(index) {
+                        const row = this.rows[index];
+                        if (!row) return;
+                        row.draft = String(Math.round(Number(row.custody_amount || 0)));
+                        row.editing = false;
+                    },
+                    async saveCustody(index) {
+                        const row = this.rows[index];
+                        if (!row || row.saving) return;
+                        const amount = this.parseAmount(row.draft);
+                        row.saving = true;
+                        try {
+                            const response = await fetch(row.update_url, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                },
+                                body: JSON.stringify({ custody_amount: amount }),
+                            });
+                            if (response.ok) {
+                                const payload = await response.json();
+                                row.custody_amount = Number(payload.data?.custody_amount ?? amount);
+                                row.draft = String(Math.round(row.custody_amount));
+                                row.editing = false;
+                                if (window.Alpine && Alpine.store('toast')) {
+                                    Alpine.store('toast').push(payload.message || 'تم تحديث مبلغ العهد بنجاح');
+                                }
+                            } else if (window.Alpine && Alpine.store('toast')) {
+                                Alpine.store('toast').push('تعذر حفظ مبلغ العهد، يرجى التأكد من صحة الرقم', 'error');
+                            }
+                        } catch (e) {
+                            if (window.Alpine && Alpine.store('toast')) {
+                                Alpine.store('toast').push('حدث خطأ في الاتصال أثناء الحفظ', 'error');
+                            }
+                        } finally {
+                            row.saving = false;
+                        }
+                    }
+                }"
+            >
                 <div class="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm">
                     <a
                         href="{{ route('financial-support.index') }}"
@@ -229,7 +330,7 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white">
-                                @foreach ($financialSupport['rows'] as $row)
+                                @foreach ($financialSupport['rows'] as $rowIndex => $row)
                                     <tr class="border-b-2 border-black even:bg-slate-50/70 hover:bg-sky-50/60 transition-colors">
                                         <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3.5">
                                             <a
@@ -243,10 +344,57 @@
                                             {{ number_format((float) $row['repair_support_amount'], 0) }}
                                         </td>
                                         <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-slate-950 tabular-nums">
-                                            {{ number_format((float) $row['custody_amount'], 0) }}
+                                            @if ($canEditCustody)
+                                                <div x-show="!rows[{{ $rowIndex }}].editing" class="inline-flex items-center justify-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        @click="startEdit({{ $rowIndex }})"
+                                                        class="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 hover:bg-slate-200/70 transition cursor-pointer"
+                                                        title="اضغط لتعديل مبلغ العهد"
+                                                    >
+                                                        <span x-text="formatNumber(rows[{{ $rowIndex }}].custody_amount)">{{ number_format((float) $row['custody_amount'], 0) }}</span>
+                                                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                <form
+                                                    x-show="rows[{{ $rowIndex }}].editing"
+                                                    x-cloak
+                                                    @submit.prevent="saveCustody({{ $rowIndex }})"
+                                                    class="inline-flex items-center justify-center gap-1.5"
+                                                >
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        min="0"
+                                                        data-custody-input="{{ $rowIndex }}"
+                                                        x-model="rows[{{ $rowIndex }}].draft"
+                                                        @keydown.escape.prevent="cancelEdit({{ $rowIndex }})"
+                                                        class="w-32 rounded-xl border-2 border-slate-900 bg-white px-2.5 py-1 text-center text-lg font-black text-slate-950 focus:outline-none tabular-nums"
+                                                    >
+                                                    <button
+                                                        type="submit"
+                                                        :disabled="rows[{{ $rowIndex }}].saving"
+                                                        class="rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        حفظ
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        @click="cancelEdit({{ $rowIndex }})"
+                                                        class="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                                                    >
+                                                        إلغاء
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{ number_format((float) $row['custody_amount'], 0) }}
+                                            @endif
                                         </td>
                                         <td class="whitespace-nowrap border-e-2 border-black bg-sky-50/60 px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-emerald-600 tabular-nums">
-                                            {{ number_format((float) $row['total_amount'], 0) }}
+                                            <span x-text="formatNumber(rowTotal({{ $rowIndex }}))">{{ number_format((float) $row['total_amount'], 0) }}</span>
                                         </td>
                                         <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-amber-600 tabular-nums">
                                             @if ($row['not_transferred_amount'] !== null && (float) $row['not_transferred_amount'] > 0)
@@ -301,10 +449,10 @@
                                         {{ number_format((float) $financialSupport['totals']['repair_support_amount'], 0) }}
                                     </td>
                                     <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-black tabular-nums">
-                                        {{ number_format((float) $financialSupport['totals']['custody_amount'], 0) }}
+                                        <span x-text="formatNumber(totalCustody())">{{ number_format((float) $financialSupport['totals']['custody_amount'], 0) }}</span>
                                     </td>
                                     <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-emerald-700 tabular-nums">
-                                        {{ number_format((float) $financialSupport['totals']['total_amount'], 0) }}
+                                        <span x-text="formatNumber(totalGrandAmount())">{{ number_format((float) $financialSupport['totals']['total_amount'], 0) }}</span>
                                     </td>
                                     <td class="whitespace-nowrap border-e-2 border-black px-2.5 py-3 text-lg sm:text-xl xl:text-2xl font-black text-amber-700 tabular-nums">
                                         @if ((float) $financialSupport['totals']['not_transferred_amount'] > 0)

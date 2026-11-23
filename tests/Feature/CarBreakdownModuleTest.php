@@ -140,3 +140,36 @@ it('seeds all 14 real car breakdown records accurately', function (): void {
         ->and(CarBreakdown::query()->where('car_code', 'C_000313')->exists())->toBeTrue()
         ->and(CarBreakdown::query()->where('fuel_type', 'ديزل')->count())->toBe(2);
 });
+
+it('classifies cars vs buses and displays separate dashboard cards for cars and buses', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    CarBreakdown::factory()->create([
+        'car_code' => 'C_000205',
+        'vehicle_category' => CarBreakdown::CATEGORY_CAR,
+        'branch' => 'نجران',
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('car-breakdowns.store'), [
+            'car_code' => 'BUS_000013',
+            'car_type' => 'باص',
+            'branch' => 'نجران',
+            'fuel_type' => 'ديزل',
+            'condition_status' => 'متعطل بالورشة',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.vehicle_category', 'باص');
+
+    $this->actingAs($admin)
+        ->withHeaders(['X-Partial' => 'true', 'Accept' => 'application/json'])
+        ->get(route('car-breakdowns.index', ['vehicle_category' => 'باص']))
+        ->assertOk()
+        ->assertJsonPath('total', 1);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('السيارات المتعطلة بالورش')
+        ->assertSee('إجمالي الباصات المتعطلة');
+});

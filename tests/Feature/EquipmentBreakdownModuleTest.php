@@ -39,9 +39,12 @@ it('lists, filters by category/severity/spare_parts_delay, and highlights spare 
         ->assertOk()
         ->assertSee('EQ-HYD-700')
         ->assertSee('ورشه نجران')
-        ->assertSee('عرض حسب النوع (النوع × الورش)')
+        ->assertSee('عرض حسب الموقف (الموقف × الورش)')
+        ->assertSee('النسبة من الإجمالي')
         ->assertSee('عرض حسب نوع المعدة (المعدة × الورش)')
-        ->assertSee('توزيع المعدات المتعطلة حسب النوع والورش')
+        ->assertSee('توزيع المعدات المتعطلة حسب الموقف والورش والنسبة من الإجمالي')
+        ->assertSee('50%')
+        ->assertSee('100%')
         ->assertSee('توزيع المعدات المتعطلة حسب نوع المعدة والورش')
         ->assertSee('تأخر قطع غيار');
 

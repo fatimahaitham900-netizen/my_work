@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\TransportViolations\FilterTransportViolationsRequest;
 use App\Http\Requests\TransportViolations\StoreTransportViolationRequest;
 use App\Http\Requests\TransportViolations\UpdateTransportViolationRequest;
@@ -18,9 +19,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransportViolationController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly TransportViolationService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'transport-violations';
+    }
+
+    protected function importModelClass(): string
+    {
+        return TransportViolation::class;
+    }
 
     public function index(FilterTransportViolationsRequest $request): View|JsonResponse
     {

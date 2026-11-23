@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\UnassignedDriverStatus;
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\UnassignedDrivers\FilterUnassignedDriversRequest;
 use App\Http\Requests\UnassignedDrivers\StoreUnassignedDriverRequest;
 use App\Http\Requests\UnassignedDrivers\UpdateUnassignedDriverRequest;
@@ -20,9 +21,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UnassignedDriverController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly UnassignedDriverService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'unassigned-drivers';
+    }
+
+    protected function importModelClass(): string
+    {
+        return UnassignedDriver::class;
+    }
 
     public function index(FilterUnassignedDriversRequest $request): View|JsonResponse
     {

@@ -177,10 +177,10 @@ class EquipmentBreakdownService
     /**
      * Build a pivot matrix (Row Dimension x Workshops) with cell counts, row totals, and workshop totals.
      *
-     * @param  'brand'|'equipment_name'  $rowColumn
+     * @param  'brand'|'equipment_name'|'workshop_status'  $rowColumn
      * @return array{
      *     workshops: list<string>,
-     *     rows: list<array{label: string, raw_value: string, counts: array<string, int>, total: int}>,
+     *     rows: list<array{label: string, raw_value: string, counts: array<string, int>, total: int, percentage: float}>,
      *     column_totals: array<string, int>,
      *     grand_total: int
      * }
@@ -228,6 +228,11 @@ class EquipmentBreakdownService
 
         $rows = array_values($grouped);
         usort($rows, static fn (array $a, array $b): int => $b['total'] <=> $a['total'] ?: strcmp($a['label'], $b['label']));
+
+        foreach ($rows as &$row) {
+            $row['percentage'] = $grandTotal > 0 ? round(($row['total'] / $grandTotal) * 100, 1) : 0.0;
+        }
+        unset($row);
 
         return [
             'workshops' => $workshops,
@@ -345,7 +350,7 @@ class EquipmentBreakdownService
                 $item->fault_description,
                 $item->workshop_status ?: $item->repair_status?->label(),
                 $amountDisplay,
-                $item->expected_repair_date?->format('Y-m-d'),
+                $item->expected_repair_date_display !== '—' ? $item->expected_repair_date_display : ($item->expected_repair_date instanceof \DateTimeInterface ? $item->expected_repair_date->format('Y-m-d') : (string) ($item->expected_repair_date ?? '')),
                 $item->notes,
             ];
         });
@@ -402,7 +407,7 @@ class EquipmentBreakdownService
                 ['label' => 'حجم العطل', 'value' => $sizeLabel],
                 ['label' => 'الموقف', 'value' => $breakdown->workshop_status ?: ($breakdown->repair_status?->label() ?? '—')],
                 ['label' => 'المبلغ', 'value' => $amountValue],
-                ['label' => 'تاريخ الإصلاح', 'value' => $breakdown->expected_repair_date?->format('Y-m-d') ?? '—'],
+                ['label' => 'تاريخ الإصلاح', 'value' => $breakdown->expected_repair_date_display],
                 ['label' => 'العطل', 'value' => $breakdown->fault_description ?: '—', 'full' => true],
                 ['label' => 'ملاحظات الموقف', 'value' => $breakdown->notes ?: '—', 'full' => true],
             ],
@@ -416,7 +421,7 @@ class EquipmentBreakdownService
                 'severity' => $breakdown->severity?->value ?? 'medium',
                 'breakdown_date' => $breakdown->breakdown_date?->format('Y-m-d') ?? '',
                 'workshop_entry_date' => $breakdown->workshop_entry_date?->format('Y-m-d') ?? '',
-                'expected_repair_date' => $breakdown->expected_repair_date?->format('Y-m-d') ?? '',
+                'expected_repair_date' => $breakdown->expected_repair_date_display !== '—' ? $breakdown->expected_repair_date_display : (string) ($breakdown->expected_repair_date ?? ''),
                 'fault_description' => $breakdown->fault_description ?? '',
                 'repair_status' => $breakdown->repair_status?->value ?? 'in_workshop',
                 'workshop_status' => $breakdown->workshop_status ?? '',

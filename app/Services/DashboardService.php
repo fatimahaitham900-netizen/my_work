@@ -16,7 +16,9 @@ use App\Models\EquipmentBreakdown;
 use App\Models\FinancialSupportTransfer;
 use App\Models\IdleProjectEquipment;
 use App\Models\OwnershipTransfer;
+use App\Models\RegistrationAmendment;
 use App\Models\RegulatoryDocument;
+use App\Models\RentalEquipment;
 use App\Models\SparePartTransfer;
 use App\Models\TransportViolation;
 use App\Models\UnassignedDriver;
@@ -73,7 +75,7 @@ class DashboardService
             ];
         }
 
-        foreach (['transport_violations', 'spare_part_transfers', 'car_breakdowns', 'idle_project_equipment', 'financial_support', 'maintenance_deviations'] as $extraKey) {
+        foreach (['transport_violations', 'spare_part_transfers', 'car_breakdowns', 'idle_project_equipment', 'financial_support', 'maintenance_deviations', 'rental_equipment', 'registration_amendments'] as $extraKey) {
             if (isset($summary['navigation_extras'][$extraKey])) {
                 $moduleCounts[$extraKey] = $summary['navigation_extras'][$extraKey];
             }
@@ -168,8 +170,10 @@ class DashboardService
         $sparePartTransfersTotal = SparePartTransfer::query()->count();
         $sparePartTransfersUnknown = SparePartTransfer::query()->unknownSource()->count();
 
-        // 8. Car Breakdowns
+        // 8. Car & Bus Breakdowns
         $carBreakdownsTotal = CarBreakdown::query()->count();
+        $carBreakdownsCarsTotal = CarBreakdown::query()->cars()->count();
+        $carBreakdownsBusesTotal = CarBreakdown::query()->buses()->count();
         $carBreakdownsMajor = CarBreakdown::query()->majorMechanical()->count();
 
         // 9. Idle Project Equipment
@@ -229,6 +233,12 @@ class DashboardService
 
         // 12. Maintenance Deviations
         $maintenanceSummary = app(MaintenanceDeviationService::class)->summaryAverages();
+
+        // 13. Rental Equipment
+        $rentalEquipmentTotal = RentalEquipment::query()->count();
+
+        // 14. Registration Amendments
+        $registrationAmendmentsTotal = RegistrationAmendment::query()->count();
 
         $totalActiveDeviations = $transfersActive
             + $stoppagesActive
@@ -350,9 +360,20 @@ class DashboardService
                 'key' => 'car_breakdowns',
                 'title' => 'السيارات المتعطلة بالورش',
                 'route' => 'car-breakdowns.index',
+                'route_params' => ['vehicle_category' => CarBreakdown::CATEGORY_CAR],
                 'span' => 'lg:col-span-3',
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($carBreakdownsTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'إجمالي العدد', 'value' => number_format($carBreakdownsCarsTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => ['vehicle_category' => CarBreakdown::CATEGORY_CAR]],
+                ],
+            ],
+            [
+                'key' => 'bus_breakdowns',
+                'title' => 'إجمالي الباصات المتعطلة',
+                'route' => 'car-breakdowns.index',
+                'route_params' => ['vehicle_category' => CarBreakdown::CATEGORY_BUS],
+                'span' => 'lg:col-span-3',
+                'cells' => [
+                    ['label' => 'إجمالي العدد', 'value' => number_format($carBreakdownsBusesTotal), 'color' => 'text-purple-700', 'tinted' => false, 'params' => ['vehicle_category' => CarBreakdown::CATEGORY_BUS]],
                 ],
             ],
             [
@@ -463,14 +484,10 @@ class DashboardService
             [
                 'key' => 'registration_amendment_needed',
                 'title' => 'معدات تحتاج إلى تعديل استمارة',
-                'route' => 'regulatory-documents.index',
-                'route_params' => ['document_type' => 'استمارة'],
+                'route' => 'registration-amendments.index',
                 'span' => 'lg:col-span-3',
-                'editable' => true,
-                'metric_key' => DashboardMetric::KEY_REGISTRATION_AMENDMENT,
-                'raw_value' => $registrationAmendmentRaw,
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => $registrationAmendmentDisplay, 'color' => 'text-amber-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'إجمالي العدد', 'value' => number_format($registrationAmendmentsTotal), 'color' => 'text-amber-600', 'tinted' => false, 'params' => []],
                 ],
             ],
             [
@@ -500,13 +517,10 @@ class DashboardService
             [
                 'key' => 'total_project_rental_equipment',
                 'title' => 'إجمالي معدات الإيجار بالمشاريع',
-                'route' => 'dashboard',
+                'route' => 'rental-equipment.index',
                 'span' => 'lg:col-span-3',
-                'editable' => true,
-                'metric_key' => DashboardMetric::KEY_TOTAL_RENTAL_EQUIPMENT,
-                'raw_value' => $totalRentalEquipmentRaw,
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => $totalRentalEquipmentDisplay, 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'إجمالي العدد', 'value' => number_format($rentalEquipmentTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
                 ],
             ],
             [
@@ -660,6 +674,20 @@ class DashboardService
                     'critical' => 0,
                     'title' => 'انحراف الصيانات',
                     'route' => 'maintenance-deviations.index',
+                    'route_params' => [],
+                ],
+                'rental_equipment' => [
+                    'active' => $rentalEquipmentTotal,
+                    'critical' => 0,
+                    'title' => 'معدات الإيجار',
+                    'route' => 'rental-equipment.index',
+                    'route_params' => [],
+                ],
+                'registration_amendments' => [
+                    'active' => $registrationAmendmentsTotal,
+                    'critical' => 0,
+                    'title' => 'معدات تعديل استمارة',
+                    'route' => 'registration-amendments.index',
                     'route_params' => [],
                 ],
             ],

@@ -69,30 +69,11 @@
         }"
         class="space-y-5"
     >
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-medium text-slate-500">إجمالي السجلات</p>
-                <p class="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-amber-800">بانتظار الإصلاح</p>
-                <p class="mt-1.5 text-2xl font-bold text-amber-800 tabular-nums" x-text="kpis.waiting">{{ $kpis['waiting'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-rose-700">توقف حرج (&gt; 3 أيام)</p>
-                <p class="mt-1.5 text-2xl font-bold text-rose-700 tabular-nums" x-text="kpis.critical_over_3">{{ $kpis['critical_over_3'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-emerald-800">تم الحل / إعادة التوجيه</p>
-                <p class="mt-1.5 text-2xl font-bold text-emerald-800 tabular-nums" x-text="kpis.resolved">{{ $kpis['resolved'] }}</p>
-            </div>
-        </section>
-
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث باسم السائق، الرقم الوظيفي، الفرع، كود المعدة، أو تشخيص العطل..."
             :create-model="\App\Models\BreakdownDriverStoppage::class"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">الفرع</label>
@@ -146,7 +127,7 @@
         </x-module.toolbar>
 
         {{-- Ruled Data Table --}}
-        <div class="relative overflow-hidden rounded-2xl border border-slate-300/80 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-white shadow-md">
             <div x-show="loadingTable" x-cloak class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
                 <span class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg">
                     <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -158,7 +139,7 @@
             </div>
 
             <div x-ref="tableContainer">
-                @include('modules.breakdown-stoppages._table', ['records' => $records])
+                @include('modules.breakdown-stoppages._table', ['records' => $records, 'breakdownsByCode' => $breakdownsByCode ?? []])
             </div>
         </div>
 
@@ -284,5 +265,15 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('breakdown-stoppages.import.direct')"
+            :template-url="route('breakdown-stoppages.import.template')"
+            title="استيراد وإسقاط بيانات سائقين متوقفين على الأعطال"
+        />
+        <x-module.purge-modal
+            :action="route('breakdown-stoppages.purge-all')"
+            module-name="سائقين متوقفين على أعطال المعدات"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection

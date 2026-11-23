@@ -83,7 +83,10 @@ class BreakdownDriverStoppageService
             $query->whereDate('stoppage_start_date', '<=', $dateTo);
         }
 
-        return $query->orderBy('id');
+        return $query
+            ->orderByRaw('CASE WHEN stoppage_start_date IS NULL THEN 1 ELSE 0 END ASC')
+            ->orderBy('stoppage_start_date', 'asc')
+            ->orderBy('id', 'asc');
     }
 
     /**
@@ -93,6 +96,72 @@ class BreakdownDriverStoppageService
     public function paginate(array $filters, int $perPage = 25): LengthAwarePaginator
     {
         return $this->filteredQuery($filters)->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Normalize equipment code for reliable cross-module matching (e.g. "DT_000020" and "DT-20" -> "DT-20").
+     */
+    public static function normalizeEquipmentCode(?string $code): string
+    {
+        $c = strtoupper(trim((string) $code));
+        if ($c === '') {
+            return '';
+        }
+
+        if (preg_match('/^([A-Z]+)[-_0]*([0-9]+)$/', $c, $m)) {
+            return $m[1].'-'.(int) $m[2];
+        }
+
+        return $c;
+    }
+
+    /**
+     * Fetch matching EquipmentBreakdown records from "معدات متعطلة بالورش" in a single query (zero N+1).
+     *
+     * @param  iterable<int, BreakdownDriverStoppage>  $records
+     * @return array<string, EquipmentBreakdown>
+     */
+    public function breakdownsByNormalizedCode(iterable $records): array
+    {
+        $neededNormalized = [];
+        foreach ($records as $stoppage) {
+            $norm = self::normalizeEquipmentCode($stoppage->equipment_code);
+            if ($norm !== '') {
+                $neededNormalized[$norm] = true;
+            }
+        }
+
+        if (empty($neededNormalized)) {
+            return [];
+        }
+
+        $allBreakdowns = EquipmentBreakdown::query()
+            ->whereNotNull('equipment_code')
+            ->where('equipment_code', '!=', '')
+            ->get([
+                'id',
+                'equipment_code',
+                'equipment_name',
+                'brand',
+                'workshop_name',
+                'workshop_status',
+                'repair_status',
+                'fault_description',
+                'estimated_cost',
+                'cost_note',
+                'expected_repair_date',
+                'notes',
+            ]);
+
+        $map = [];
+        foreach ($allBreakdowns as $breakdown) {
+            $norm = self::normalizeEquipmentCode($breakdown->equipment_code);
+            if ($norm !== '' && isset($neededNormalized[$norm]) && ! isset($map[$norm])) {
+                $map[$norm] = $breakdown;
+            }
+        }
+
+        return $map;
     }
 
     /**

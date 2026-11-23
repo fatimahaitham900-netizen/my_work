@@ -218,6 +218,7 @@
             search-placeholder="ابحث بنوع المعدة، الكود، اسم المستفيد، نوع العطل، الفرع، أو رقم الـ PO..."
             :create-model="\App\Models\FinancialSupportTransfer::class"
             create-label="إضافة تحويل جديد"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">الفرع</label>
@@ -374,6 +375,18 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('financial-support.import.direct')"
+            :template-url="route('financial-support.import.template')"
+            title="استيراد وإسقاط بيانات الدعم المالي"
+            :hidden-fields="['month' => ($activeMonth ?? 'all') !== 'all' ? $activeMonth : '']"
+        />
+        <x-module.purge-modal
+            :action="route('financial-support.purge-all')"
+            :module-name="($activeMonth ?? 'all') !== 'all' ? 'الدعم المالي (شهر '.$activeMonth.')' : 'الدعم المالي'"
+            :count="$kpis['total'] ?? 0"
+            :hidden-fields="['month' => ($activeMonth ?? 'all') !== 'all' ? $activeMonth : '']"
+        />
     </div>
 @endsection
 

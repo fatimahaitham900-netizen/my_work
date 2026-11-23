@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ComplianceStatus;
 use App\Enums\RegulatoryEntityType;
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\RegulatoryDocuments\FilterRegulatoryDocumentsRequest;
 use App\Http\Requests\RegulatoryDocuments\StoreRegulatoryDocumentRequest;
 use App\Http\Requests\RegulatoryDocuments\UpdateRegulatoryDocumentRequest;
@@ -20,9 +21,35 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RegulatoryDocumentController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly RegulatoryDocumentService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'regulatory-documents';
+    }
+
+    protected function importModelClass(): string
+    {
+        return RegulatoryDocument::class;
+    }
+
+    protected function importContext(Request $request): array
+    {
+        $docType = trim((string) $request->input('document_type', ''));
+
+        return $docType !== '' ? ['document_type' => $docType] : [];
+    }
+
+    protected function importRedirectParams(Request $request): array
+    {
+        $docType = trim((string) $request->input('document_type', ''));
+
+        return $docType !== '' ? ['document_type' => $docType] : [];
+    }
 
     public function index(FilterRegulatoryDocumentsRequest $request): View|JsonResponse
     {
@@ -43,11 +70,15 @@ class RegulatoryDocumentController extends Controller
             ]);
         }
 
+        $isSummaryView = $request->query('view') === 'summary';
+
         return view('modules.regulatory-documents.index', [
             'records' => $records,
             'kpis' => $kpis,
             'filters' => $filters,
             'activeDocumentType' => $activeDocumentType,
+            'isSummaryView' => $isSummaryView,
+            'equipmentSummary' => $this->service->equipmentTypeSummary(),
             'documentTabs' => $this->service->documentTabs(),
             'options' => $this->service->filterOptions(),
             'entityTypes' => RegulatoryEntityType::cases(),

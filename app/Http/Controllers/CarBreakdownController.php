@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\CarBreakdowns\FilterCarBreakdownsRequest;
 use App\Http\Requests\CarBreakdowns\StoreCarBreakdownRequest;
 use App\Http\Requests\CarBreakdowns\UpdateCarBreakdownRequest;
@@ -18,9 +19,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CarBreakdownController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly CarBreakdownService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'car-breakdowns';
+    }
+
+    protected function importModelClass(): string
+    {
+        return CarBreakdown::class;
+    }
 
     public function index(FilterCarBreakdownsRequest $request): View|JsonResponse
     {

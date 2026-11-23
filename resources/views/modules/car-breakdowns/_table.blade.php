@@ -1,20 +1,20 @@
-<div class="overflow-x-auto max-h-[74vh]">
-    <table class="min-w-full border-collapse text-[13px]">
-        <thead class="sticky top-0 z-10 bg-slate-900 text-xs font-extrabold text-white shadow-xs">
+<div class="overflow-x-auto max-h-[76vh]">
+    <table class="min-w-full border-collapse text-sm">
+        <thead class="sticky top-0 z-10 bg-slate-950 text-[13px] font-black text-white shadow-sm">
             <tr>
-                <th scope="col" class="w-12 border-b-2 border-e border-slate-700 px-2.5 py-3.5 text-center">م</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">كود السيارة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-start">نوع السيارة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">اللوحة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">موديل</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-start">المستلم السابق</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">الرقم الوظيفي</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">الإدارة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-start">الوظيفة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">نوع الوقود</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">الفرع</th>
-                <th scope="col" class="min-w-52 border-b-2 border-e border-rose-500/70 bg-rose-500/20 px-3.5 py-3.5 text-start text-rose-200">الحالة</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3 py-3.5 text-center">الإجراءات</th>
+                <th scope="col" class="w-14 whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">م</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-center">الكود</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-center">التصنيف</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-start">نوع السيارة / الباص</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-center">اللوحة</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">موديل</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-start">المستلم السابق</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">الرقم الوظيفي</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">الإدارة</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3.5 py-4 text-start">الوظيفة</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">نوع الوقود</th>
+                <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-3 py-4 text-center">الفرع</th>
+                <th scope="col" class="min-w-52 border-b-2 border-rose-500/80 bg-rose-900/60 px-3.5 py-4 text-start text-rose-100">الحالة</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -23,89 +23,95 @@
                     $rowNumber = ($records->firstItem() ?? 1) + $loop->index;
                     $condition = (string) ($car->condition_status ?? '');
                     $conditionBadge = match (true) {
-                        str_contains($condition, 'ماكينة') || str_contains($condition, 'شاسية') || str_contains($condition, 'بخاخات') || str_contains($condition, 'تربو') => 'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-600/30',
-                        str_contains($condition, 'بخرة') || str_contains($condition, 'عفشة') => 'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-600/30',
-                        str_contains($condition, 'فحص') => 'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-600/25',
-                        default => 'bg-slate-100 text-slate-800',
+                        str_contains($condition, 'ماكينة') || str_contains($condition, 'شاسية') || str_contains($condition, 'بخاخات') || str_contains($condition, 'تربو') => 'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-600/35',
+                        str_contains($condition, 'بخرة') || str_contains($condition, 'عفشة') => 'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-600/35',
+                        str_contains($condition, 'فحص') => 'bg-sky-100 text-sky-950 ring-1 ring-inset ring-sky-600/30',
+                        default => 'bg-slate-100 text-slate-900',
                     };
 
                     $fuel = (string) ($car->fuel_type ?? '');
                     $fuelBadge = $fuel === 'ديزل'
-                        ? 'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-600/30'
-                        : 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-600/25';
+                        ? 'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-600/35'
+                        : 'bg-emerald-100 text-emerald-950 ring-1 ring-inset ring-emerald-600/30';
                 @endphp
-                <tr class="border-b border-slate-300 even:bg-slate-50/90 hover:bg-amber-50/60 transition-colors">
-                    <td class="whitespace-nowrap border-e border-slate-300 bg-slate-100/70 px-2.5 py-3 text-center text-xs font-extrabold text-slate-800 tabular-nums">
+                <tr class="border-b-2 border-slate-800 even:bg-slate-100/75 hover:bg-amber-50/70 transition-colors">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 bg-slate-200/60 px-3 py-3.5 text-center text-sm font-black text-slate-950 tabular-nums">
                         {{ $rowNumber }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-center">
-                        <code dir="ltr" class="inline-block rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-xs font-extrabold text-slate-950 ring-1 ring-inset ring-slate-300">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-center">
+                        <span dir="ltr" class="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1 font-mono text-xs font-black text-white shadow-xs">
                             {{ $car->car_code ?: '—' }}
-                        </code>
+                        </span>
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-start font-extrabold text-slate-950">
+                    @php
+                        $categoryLabel = $car->vehicle_category ?: \App\Models\CarBreakdown::CATEGORY_CAR;
+                        $isBus = $categoryLabel === \App\Models\CarBreakdown::CATEGORY_BUS;
+                    @endphp
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-center">
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black {{ $isBus ? 'bg-purple-100 text-purple-950 ring-1 ring-inset ring-purple-600/35' : 'bg-blue-100 text-blue-950 ring-1 ring-inset ring-blue-600/30' }}">
+                            {{ $categoryLabel }}
+                        </span>
+                    </td>
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-start text-sm font-black text-slate-950">
                         {{ $car->car_type ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-center font-extrabold text-slate-900">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-center text-sm font-black text-slate-950">
                         {{ $car->plate_number ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center font-extrabold text-slate-900 tabular-nums">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3 py-3.5 text-center text-sm font-black text-slate-950 tabular-nums">
                         {{ $car->model_year ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-start font-bold {{ $car->previous_receiver === 'بدون' ? 'text-slate-400' : 'text-slate-900' }}">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-start text-sm font-extrabold {{ $car->previous_receiver === 'بدون' ? 'text-slate-400' : 'text-slate-950' }}">
                         {{ $car->previous_receiver ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center font-extrabold tabular-nums {{ $car->employee_id === 'بدون' ? 'text-slate-400' : 'text-slate-900' }}">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3 py-3.5 text-center font-mono text-sm font-black tabular-nums {{ $car->employee_id === 'بدون' ? 'text-slate-400' : 'text-slate-950' }}">
                         <span dir="ltr">{{ $car->employee_id ?: '—' }}</span>
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3 py-3.5 text-center">
                         @if ($car->department && $car->department !== 'بدون')
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-900 ring-1 ring-inset ring-slate-300">
+                            <span class="inline-flex items-center rounded-full bg-slate-200/80 px-3 py-1 text-xs font-black text-slate-950 ring-1 ring-inset ring-slate-400/50">
                                 {{ $car->department }}
                             </span>
                         @else
                             <span class="font-bold text-slate-400">{{ $car->department ?: '—' }}</span>
                         @endif
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3.5 py-3 text-start font-bold {{ $car->job_title === 'بدون' ? 'text-slate-400' : 'text-slate-800' }}">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3.5 py-3.5 text-start text-sm font-extrabold {{ $car->job_title === 'بدون' ? 'text-slate-400' : 'text-slate-900' }}">
                         {{ $car->job_title ?: '—' }}
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3 py-3.5 text-center">
                         @if ($fuel !== '')
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-extrabold {{ $fuelBadge }}">
+                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black {{ $fuelBadge }}">
                                 {{ $fuel }}
                             </span>
                         @else
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="whitespace-nowrap border-e border-slate-300 px-3 py-3 text-center">
+                    <td class="whitespace-nowrap border-e-2 border-slate-400 px-3 py-3.5 text-center">
                         @if ($car->branch)
-                            <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-900 ring-1 ring-inset ring-sky-600/25">
+                            <span class="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-950 ring-1 ring-inset ring-sky-600/30">
                                 {{ $car->branch }}
                             </span>
                         @else
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="min-w-52 border-e border-slate-300 bg-rose-50/30 px-3.5 py-3 text-start">
+                    <td class="min-w-52 bg-rose-50/40 px-3.5 py-3.5 text-start">
                         @if ($condition !== '')
-                            <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-extrabold leading-snug {{ $conditionBadge }}">
+                            <span class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black leading-snug {{ $conditionBadge }}">
                                 {{ $condition }}
                             </span>
                         @else
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-center">
-                        <x-module.row-actions :record="$car" :label="$car->car_code ?: ($car->plate_number ?: 'عطل سيارة')" />
-                    </td>
                 </tr>
             @empty
                 <tr>
                     <td colspan="13" class="px-6 py-12 text-center">
-                        <p class="text-sm font-bold text-slate-800">لا توجد أعطال سيارات مطابقة لمعايير البحث</p>
-                        <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو إضافة سجل عطل سيارة جديد.</p>
+                        <p class="text-base font-black text-slate-900">لا توجد أعطال سيارات مطابقة لمعايير البحث</p>
+                        <p class="mt-1 text-xs font-bold text-slate-500">جرب تغيير الفلاتر أو إضافة سجل عطل سيارة جديد.</p>
                     </td>
                 </tr>
             @endforelse

@@ -8,6 +8,7 @@ use App\Enums\BreakdownCategory;
 use App\Enums\BreakdownSeverity;
 use App\Enums\RepairStatus;
 use App\Traits\Auditable;
+use Carbon\Carbon;
 use Database\Factories\EquipmentBreakdownFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -50,11 +51,63 @@ class EquipmentBreakdown extends Model
             'severity' => BreakdownSeverity::class,
             'breakdown_date' => 'date',
             'workshop_entry_date' => 'date',
-            'expected_repair_date' => 'date',
             'repair_status' => RepairStatus::class,
             'spare_parts_delay' => 'boolean',
             'estimated_cost' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Normalized display string for expected_repair_date.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function expectedRepairDateDisplay(): Attribute
+    {
+        return Attribute::make(
+            get: function (): string {
+                $val = trim((string) ($this->attributes['expected_repair_date'] ?? ''));
+                if ($val === '' || $val === '—' || $val === '-') {
+                    return '—';
+                }
+
+                if (is_numeric($val) && (int) $val > 20000 && (int) $val < 60000) {
+                    try {
+                        return Carbon::create(1899, 12, 30)->addDays((int) $val)->format('d/m/Y');
+                    } catch (\Throwable) {
+                        return $val;
+                    }
+                }
+
+                try {
+                    return Carbon::parse($val)->format('d/m/Y');
+                } catch (\Throwable) {
+                    return $val;
+                }
+            },
+        );
+    }
+
+    /**
+     * Mutator/Accessor for expected_repair_date to gracefully accept Carbon, DateTime, or string.
+     *
+     * @return Attribute<string|null, string|\DateTimeInterface|null>
+     */
+    protected function expectedRepairDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value,
+            set: function ($value): ?string {
+                if ($value === null || $value === '' || $value === '—' || $value === '-') {
+                    return null;
+                }
+                if ($value instanceof \DateTimeInterface) {
+                    return $value->format('Y-m-d');
+                }
+
+                return (string) $value;
+            },
+        );
     }
 
     /**

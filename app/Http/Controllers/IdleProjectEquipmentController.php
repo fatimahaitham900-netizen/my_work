@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\IdleProjectEquipment\FilterIdleProjectEquipmentRequest;
 use App\Http\Requests\IdleProjectEquipment\StoreIdleProjectEquipmentRequest;
 use App\Http\Requests\IdleProjectEquipment\UpdateIdleProjectEquipmentRequest;
@@ -18,9 +19,21 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdleProjectEquipmentController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly IdleProjectEquipmentService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'idle-project-equipment';
+    }
+
+    protected function importModelClass(): string
+    {
+        return IdleProjectEquipment::class;
+    }
 
     public function index(FilterIdleProjectEquipmentRequest $request): View|JsonResponse
     {

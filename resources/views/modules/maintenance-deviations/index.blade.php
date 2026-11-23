@@ -76,6 +76,7 @@
             search-placeholder="ابحث برقم اليوم أو الملاحظات..."
             :create-model="\App\Models\MaintenanceDeviation::class"
             create-label="إضافة يوم جديد"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">حالة اليوم</label>
@@ -165,6 +166,16 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('maintenance-deviations.import.direct')"
+            :template-url="route('maintenance-deviations.import.template')"
+            title="استيراد وإسقاط بيانات انحراف الصيانات"
+        />
+        <x-module.purge-modal
+            :action="route('maintenance-deviations.purge-all')"
+            module-name="انحراف الصيانات"
+            :count="$records->total()"
+        />
     </div>
 @endsection
 

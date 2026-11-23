@@ -17,8 +17,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">الرقم الوظيفي</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">حالة الموظف</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">التحميل</th>
-                <th scope="col" class="min-w-44 border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">موقف التصريح</th>
-                <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3 py-3.5 text-center">الإجراءات</th>
+                <th scope="col" class="min-w-44 border-b-2 border-slate-700 px-3.5 py-3.5 text-center">موقف التصريح</th>
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -147,7 +146,7 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="min-w-44 max-w-xs border-e border-slate-300 px-3.5 py-3 text-center">
+                    <td class="min-w-44 max-w-xs px-3.5 py-3 text-center">
                         @if ($permit !== '')
                             <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold leading-snug {{ $permitBadge }}">
                                 {{ $permit }}
@@ -156,13 +155,10 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-center">
-                        <x-module.row-actions :record="$violation" :label="$violation->violation_number ?: 'مخالفة نقل'" />
-                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="17" class="px-6 py-12 text-center">
+                    <td colspan="16" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد مخالفات وزارة نقل مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو إضافة مخالفة جديدة.</p>
                     </td>
@@ -178,7 +174,7 @@
                     <td class="whitespace-nowrap border-e border-rose-500/70 bg-rose-600/90 px-4 py-3.5 text-center text-sm font-extrabold text-white tabular-nums">
                         {{ number_format((float) $filteredAmountTotal, 0) }} ر.س
                     </td>
-                    <td colspan="12" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
+                    <td colspan="11" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
                         يتم احتساب إجمالي المبالغ تلقائياً وفق الفلاتر النشطة حالياً
                     </td>
                 </tr>

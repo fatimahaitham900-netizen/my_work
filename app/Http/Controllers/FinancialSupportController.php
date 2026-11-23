@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesModuleSpreadsheetImport;
 use App\Http\Requests\FinancialSupport\FilterFinancialSupportRequest;
 use App\Http\Requests\FinancialSupport\StoreFinancialSupportTransferRequest;
 use App\Http\Requests\FinancialSupport\UpdateFinancialSupportMonthRequest;
@@ -20,9 +21,38 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FinancialSupportController extends Controller
 {
+    use HandlesModuleSpreadsheetImport;
+
     public function __construct(
         private readonly FinancialSupportService $service,
     ) {}
+
+    protected function importModuleKey(): string
+    {
+        return 'financial-support';
+    }
+
+    protected function importModelClass(): string
+    {
+        return FinancialSupportTransfer::class;
+    }
+
+    protected function importContext(Request $request): array
+    {
+        $month = (string) $request->input('month', '');
+        $year = (int) $request->input('year', now()->year);
+
+        return is_numeric($month) && (int) $month >= 1 && (int) $month <= 12
+            ? ['support_month' => (int) $month, 'support_year' => $year]
+            : [];
+    }
+
+    protected function importRedirectParams(Request $request): array
+    {
+        $month = trim((string) $request->input('month', ''));
+
+        return $month !== '' ? ['month' => $month] : [];
+    }
 
     public function index(FilterFinancialSupportRequest $request): View|JsonResponse
     {
@@ -136,6 +166,41 @@ class FinancialSupportController extends Controller
         return redirect()
             ->route('financial-support.index', ['month' => $updated->month])
             ->with('status', 'تم تحديث ملخص الشهر بنجاح');
+    }
+
+    public function updateMonthCustody(Request $request, FinancialSupportMonth $financialSupportMonth): JsonResponse|RedirectResponse
+    {
+        Gate::authorize('update', $financialSupportMonth);
+
+        $rawCustody = str_replace([',', ' '], '', (string) $request->input('custody_amount', '0'));
+        $request->merge([
+            'custody_amount' => $rawCustody === '' ? 0 : $rawCustody,
+        ]);
+
+        $validated = $request->validate([
+            'custody_amount' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+        ]);
+
+        $updated = $this->service->updateMonthCustody($financialSupportMonth, (float) $validated['custody_amount']);
+        $summary = $this->service->dashboardTableSummary();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'تم تحديث مبلغ العهد بنجاح',
+                'data' => [
+                    'id' => $updated->id,
+                    'month' => (int) $updated->month,
+                    'repair_support_amount' => (float) $updated->repair_support_amount,
+                    'custody_amount' => (float) $updated->custody_amount,
+                    'total_amount' => (float) $updated->total_amount,
+                ],
+                'totals' => $summary['totals'],
+            ]);
+        }
+
+        return redirect()
+            ->route('dashboard')
+            ->with('status', 'تم تحديث مبلغ العهد بنجاح');
     }
 
     public function export(FilterFinancialSupportRequest $request): StreamedResponse

@@ -11,7 +11,9 @@ use App\Http\Controllers\FinancialSupportController;
 use App\Http\Controllers\IdleProjectEquipmentController;
 use App\Http\Controllers\MaintenanceDeviationController;
 use App\Http\Controllers\OwnershipTransferController;
+use App\Http\Controllers\RegistrationAmendmentController;
 use App\Http\Controllers\RegulatoryDocumentController;
+use App\Http\Controllers\RentalEquipmentController;
 use App\Http\Controllers\SparePartTransferController;
 use App\Http\Controllers\TransportViolationController;
 use App\Http\Controllers\UnassignedDriverController;
@@ -33,6 +35,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('ownership-transfers')->name('ownership-transfers.')->group(function (): void {
         Route::get('/', [OwnershipTransferController::class, 'index'])->name('index');
         Route::get('/export', [OwnershipTransferController::class, 'export'])->name('export');
+        Route::get('/import/template', [OwnershipTransferController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [OwnershipTransferController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [OwnershipTransferController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [OwnershipTransferController::class, 'store'])->name('store');
         Route::get('/{ownershipTransfer}', [OwnershipTransferController::class, 'show'])->name('show');
         Route::put('/{ownershipTransfer}', [OwnershipTransferController::class, 'update'])->name('update');
@@ -43,6 +48,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('breakdown-stoppages')->name('breakdown-stoppages.')->group(function (): void {
         Route::get('/', [BreakdownDriverStoppageController::class, 'index'])->name('index');
         Route::get('/export', [BreakdownDriverStoppageController::class, 'export'])->name('export');
+        Route::get('/import/template', [BreakdownDriverStoppageController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [BreakdownDriverStoppageController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [BreakdownDriverStoppageController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [BreakdownDriverStoppageController::class, 'store'])->name('store');
         Route::get('/{breakdownStoppage}', [BreakdownDriverStoppageController::class, 'show'])->name('show');
         Route::put('/{breakdownStoppage}', [BreakdownDriverStoppageController::class, 'update'])->name('update');
@@ -56,6 +64,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('unassigned-drivers')->name('unassigned-drivers.')->group(function (): void {
         Route::get('/', [UnassignedDriverController::class, 'index'])->name('index');
         Route::get('/export', [UnassignedDriverController::class, 'export'])->name('export');
+        Route::get('/import/template', [UnassignedDriverController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [UnassignedDriverController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [UnassignedDriverController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [UnassignedDriverController::class, 'store'])->name('store');
         Route::get('/{unassignedDriver}', [UnassignedDriverController::class, 'show'])->name('show');
         Route::put('/{unassignedDriver}', [UnassignedDriverController::class, 'update'])->name('update');
@@ -67,6 +78,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('equipment-breakdowns')->name('equipment-breakdowns.')->group(function (): void {
         Route::get('/', [EquipmentBreakdownController::class, 'index'])->name('index');
         Route::get('/export', [EquipmentBreakdownController::class, 'export'])->name('export');
+        Route::get('/import/template', [EquipmentBreakdownController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [EquipmentBreakdownController::class, 'directImport'])->name('import.direct');
+        Route::post('/import/preview', [EquipmentBreakdownController::class, 'previewImport'])->name('import.preview');
+        Route::post('/import/apply', [EquipmentBreakdownController::class, 'applyImport'])->name('import.apply');
+        Route::post('/import/cancel', [EquipmentBreakdownController::class, 'cancelImport'])->name('import.cancel');
+        Route::delete('/purge-all', [EquipmentBreakdownController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [EquipmentBreakdownController::class, 'store'])->name('store');
         Route::get('/{equipmentBreakdown}', [EquipmentBreakdownController::class, 'show'])->name('show');
         Route::put('/{equipmentBreakdown}', [EquipmentBreakdownController::class, 'update'])->name('update');
@@ -77,6 +94,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('regulatory-documents')->name('regulatory-documents.')->group(function (): void {
         Route::get('/', [RegulatoryDocumentController::class, 'index'])->name('index');
         Route::get('/export', [RegulatoryDocumentController::class, 'export'])->name('export');
+        Route::get('/import/template', [RegulatoryDocumentController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [RegulatoryDocumentController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [RegulatoryDocumentController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [RegulatoryDocumentController::class, 'store'])->name('store');
         Route::get('/{regulatoryDocument}', [RegulatoryDocumentController::class, 'show'])->name('show');
         Route::put('/{regulatoryDocument}', [RegulatoryDocumentController::class, 'update'])->name('update');
@@ -87,6 +107,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('transport-violations')->name('transport-violations.')->group(function (): void {
         Route::get('/', [TransportViolationController::class, 'index'])->name('index');
         Route::get('/export', [TransportViolationController::class, 'export'])->name('export');
+        Route::get('/import/template', [TransportViolationController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [TransportViolationController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [TransportViolationController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [TransportViolationController::class, 'store'])->name('store');
         Route::get('/{transportViolation}', [TransportViolationController::class, 'show'])->name('show');
         Route::put('/{transportViolation}', [TransportViolationController::class, 'update'])->name('update');
@@ -97,6 +120,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('spare-part-transfers')->name('spare-part-transfers.')->group(function (): void {
         Route::get('/', [SparePartTransferController::class, 'index'])->name('index');
         Route::get('/export', [SparePartTransferController::class, 'export'])->name('export');
+        Route::get('/import/template', [SparePartTransferController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [SparePartTransferController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [SparePartTransferController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [SparePartTransferController::class, 'store'])->name('store');
         Route::get('/{sparePartTransfer}', [SparePartTransferController::class, 'show'])->name('show');
         Route::put('/{sparePartTransfer}', [SparePartTransferController::class, 'update'])->name('update');
@@ -107,6 +133,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('car-breakdowns')->name('car-breakdowns.')->group(function (): void {
         Route::get('/', [CarBreakdownController::class, 'index'])->name('index');
         Route::get('/export', [CarBreakdownController::class, 'export'])->name('export');
+        Route::get('/import/template', [CarBreakdownController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [CarBreakdownController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [CarBreakdownController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [CarBreakdownController::class, 'store'])->name('store');
         Route::get('/{carBreakdown}', [CarBreakdownController::class, 'show'])->name('show');
         Route::put('/{carBreakdown}', [CarBreakdownController::class, 'update'])->name('update');
@@ -117,6 +146,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('idle-project-equipment')->name('idle-project-equipment.')->group(function (): void {
         Route::get('/', [IdleProjectEquipmentController::class, 'index'])->name('index');
         Route::get('/export', [IdleProjectEquipmentController::class, 'export'])->name('export');
+        Route::get('/import/template', [IdleProjectEquipmentController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [IdleProjectEquipmentController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [IdleProjectEquipmentController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [IdleProjectEquipmentController::class, 'store'])->name('store');
         Route::get('/{idleProjectEquipment}', [IdleProjectEquipmentController::class, 'show'])->name('show');
         Route::put('/{idleProjectEquipment}', [IdleProjectEquipmentController::class, 'update'])->name('update');
@@ -127,8 +159,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('financial-support')->name('financial-support.')->group(function (): void {
         Route::get('/', [FinancialSupportController::class, 'index'])->name('index');
         Route::get('/export', [FinancialSupportController::class, 'export'])->name('export');
+        Route::get('/import/template', [FinancialSupportController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [FinancialSupportController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [FinancialSupportController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [FinancialSupportController::class, 'store'])->name('store');
         Route::put('/months/{financialSupportMonth}', [FinancialSupportController::class, 'updateMonth'])->name('months.update');
+        Route::patch('/months/{financialSupportMonth}/custody', [FinancialSupportController::class, 'updateMonthCustody'])->name('months.custody.update');
         Route::get('/{financialSupportTransfer}', [FinancialSupportController::class, 'show'])->name('show');
         Route::put('/{financialSupportTransfer}', [FinancialSupportController::class, 'update'])->name('update');
         Route::delete('/{financialSupportTransfer}', [FinancialSupportController::class, 'destroy'])->name('destroy');
@@ -138,9 +174,38 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::prefix('maintenance-deviations')->name('maintenance-deviations.')->group(function (): void {
         Route::get('/', [MaintenanceDeviationController::class, 'index'])->name('index');
         Route::get('/export', [MaintenanceDeviationController::class, 'export'])->name('export');
+        Route::get('/import/template', [MaintenanceDeviationController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [MaintenanceDeviationController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [MaintenanceDeviationController::class, 'purgeAll'])->name('purge-all');
         Route::post('/', [MaintenanceDeviationController::class, 'store'])->name('store');
         Route::get('/{maintenanceDeviation}', [MaintenanceDeviationController::class, 'show'])->name('show');
         Route::put('/{maintenanceDeviation}', [MaintenanceDeviationController::class, 'update'])->name('update');
         Route::delete('/{maintenanceDeviation}', [MaintenanceDeviationController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 12: معدات الإيجار
+    Route::prefix('rental-equipment')->name('rental-equipment.')->group(function (): void {
+        Route::get('/', [RentalEquipmentController::class, 'index'])->name('index');
+        Route::get('/export', [RentalEquipmentController::class, 'export'])->name('export');
+        Route::get('/import/template', [RentalEquipmentController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [RentalEquipmentController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [RentalEquipmentController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [RentalEquipmentController::class, 'store'])->name('store');
+        Route::get('/{rentalEquipment}', [RentalEquipmentController::class, 'show'])->name('show');
+        Route::put('/{rentalEquipment}', [RentalEquipmentController::class, 'update'])->name('update');
+        Route::delete('/{rentalEquipment}', [RentalEquipmentController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 13: معدات تعديل استمارة
+    Route::prefix('registration-amendments')->name('registration-amendments.')->group(function (): void {
+        Route::get('/', [RegistrationAmendmentController::class, 'index'])->name('index');
+        Route::get('/export', [RegistrationAmendmentController::class, 'export'])->name('export');
+        Route::get('/import/template', [RegistrationAmendmentController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [RegistrationAmendmentController::class, 'directImport'])->name('import.direct');
+        Route::delete('/purge-all', [RegistrationAmendmentController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [RegistrationAmendmentController::class, 'store'])->name('store');
+        Route::get('/{registrationAmendment}', [RegistrationAmendmentController::class, 'show'])->name('show');
+        Route::put('/{registrationAmendment}', [RegistrationAmendmentController::class, 'update'])->name('update');
+        Route::delete('/{registrationAmendment}', [RegistrationAmendmentController::class, 'destroy'])->name('destroy');
     });
 });

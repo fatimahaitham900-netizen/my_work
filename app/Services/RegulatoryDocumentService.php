@@ -154,6 +154,81 @@ class RegulatoryDocumentService
     }
 
     /**
+     * Build summary matrix of expired documents grouped by equipment_type across:
+     * فحص منتهي، استمارات منتهية، كروت منتهية.
+     *
+     * @return array{
+     *     rows: list<array{
+     *         equipment_type: string,
+     *         raw_equipment_type: string,
+     *         expired_inspection: int,
+     *         expired_registration: int,
+     *         expired_operating_card: int,
+     *         total: int
+     *     }>,
+     *     totals: array{
+     *         expired_inspection: int,
+     *         expired_registration: int,
+     *         expired_operating_card: int,
+     *         total: int
+     *     }
+     * }
+     */
+    public function equipmentTypeSummary(): array
+    {
+        $rawRows = RegulatoryDocument::query()
+            ->whereIn('document_type', ['فحص دوري', 'استمارة', 'كرت تشغيل'])
+            ->whereIn('compliance_status', [ComplianceStatus::Expired->value, ComplianceStatus::Missing->value])
+            ->selectRaw('equipment_type, document_type, COUNT(*) as total_rows')
+            ->groupBy('equipment_type', 'document_type')
+            ->get();
+
+        $grouped = [];
+
+        foreach ($rawRows as $item) {
+            $rawType = trim((string) ($item->equipment_type ?? ''));
+            $label = $rawType !== '' ? $rawType : 'غير محدد';
+
+            if (! isset($grouped[$label])) {
+                $grouped[$label] = [
+                    'equipment_type' => $label,
+                    'raw_equipment_type' => $rawType,
+                    'expired_inspection' => 0,
+                    'expired_registration' => 0,
+                    'expired_operating_card' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            $count = (int) $item->total_rows;
+
+            match ((string) $item->document_type) {
+                'فحص دوري' => $grouped[$label]['expired_inspection'] += $count,
+                'استمارة' => $grouped[$label]['expired_registration'] += $count,
+                'كرت تشغيل' => $grouped[$label]['expired_operating_card'] += $count,
+                default => null,
+            };
+
+            $grouped[$label]['total'] += $count;
+        }
+
+        $rows = array_values($grouped);
+        usort($rows, static fn (array $a, array $b): int => $b['total'] <=> $a['total'] ?: strcmp($a['equipment_type'], $b['equipment_type']));
+
+        $totals = [
+            'expired_inspection' => array_sum(array_column($rows, 'expired_inspection')),
+            'expired_registration' => array_sum(array_column($rows, 'expired_registration')),
+            'expired_operating_card' => array_sum(array_column($rows, 'expired_operating_card')),
+            'total' => array_sum(array_column($rows, 'total')),
+        ];
+
+        return [
+            'rows' => $rows,
+            'totals' => $totals,
+        ];
+    }
+
+    /**
      * @return array{
      *     document_types: list<string>,
      *     branches: list<string>,

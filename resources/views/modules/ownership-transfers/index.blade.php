@@ -60,30 +60,11 @@
         }"
         class="space-y-5"
     >
-        {{-- KPI Mini-Header --}}
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-                <p class="text-xs font-medium text-slate-500">إجمالي المعدات</p>
-                <p class="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums" x-text="kpis.total">{{ $kpis['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-rose-700">طلبات متأخرة (حرجة)</p>
-                <p class="mt-1.5 text-2xl font-bold text-rose-700 tabular-nums" x-text="kpis.delayed">{{ $kpis['delayed'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-amber-800">قيد الإجراء</p>
-                <p class="mt-1.5 text-2xl font-bold text-amber-800 tabular-nums" x-text="kpis.pending">{{ $kpis['pending'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-4 shadow-xs">
-                <p class="text-xs font-medium text-emerald-800">في الوقت المحدد</p>
-                <p class="mt-1.5 text-2xl font-bold text-emerald-800 tabular-nums" x-text="kpis.on_time">{{ $kpis['on_time'] }}</p>
-            </div>
-        </section>
-
         {{-- Action & Filter Toolbar --}}
         <x-module.toolbar
             search-placeholder="ابحث بكود المعدة، البيان، الفرع، رقم الهيكل، أو الملاحظات..."
             :create-model="\App\Models\OwnershipTransfer::class"
+            :show-import-purge="true"
         >
             <div>
                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">الفرع</label>
@@ -135,7 +116,7 @@
         </x-module.toolbar>
 
         {{-- Ruled Data Table Container --}}
-        <div class="relative overflow-hidden rounded-2xl border border-slate-300/80 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-white shadow-md">
             <div
                 x-show="loadingTable"
                 x-cloak
@@ -263,5 +244,15 @@
 
         <x-module.details-modal />
         <x-module.delete-modal />
+        <x-module.import-modal
+            :action="route('ownership-transfers.import.direct')"
+            :template-url="route('ownership-transfers.import.template')"
+            title="استيراد وإسقاط بيانات نقل ملكيات المعدات"
+        />
+        <x-module.purge-modal
+            :action="route('ownership-transfers.purge-all')"
+            module-name="نقل ملكيات المعدات"
+            :count="$kpis['total'] ?? 0"
+        />
     </div>
 @endsection
