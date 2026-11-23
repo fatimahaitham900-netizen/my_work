@@ -10,13 +10,59 @@
 }
 
 @layer base {
-    html {
+    html,
+    body {
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        max-width: 100%;
+        overflow-x: hidden;
     }
 
     [x-cloak] {
         display: none !important;
+    }
+}
+
+.executive-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+}
+
+.executive-kpi-card {
+    min-width: 0;
+    width: 100%;
+    grid-column: span 1 / span 1;
+}
+
+.executive-kpi-card--wide {
+    min-width: 0;
+    width: 100%;
+    grid-column: span 1 / span 1;
+}
+
+@media (min-width: 640px) {
+    .executive-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .executive-kpi-card--wide {
+        grid-column: span 2 / span 2;
+    }
+}
+
+@media (min-width: 1024px) {
+    .executive-kpi-grid {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+    }
+
+    .executive-kpi-card {
+        grid-column: span 2 / span 2;
+    }
+
+    .executive-kpi-card--wide {
+        grid-column: span 4 / span 4;
     }
 }

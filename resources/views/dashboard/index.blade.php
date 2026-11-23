@@ -65,11 +65,24 @@
             </div>
         </section>
 
-        {{-- Executive Ruled Summary Boxes (5 Columns Per Row — High-Contrast TV Display) --}}
+        {{-- Executive Ruled Summary Boxes (5 Columns Per Row — Locked Universal CSS Grid) --}}
+        <style>
+            .executive-kpi-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1rem; width: 100%; }
+            .executive-kpi-card, .executive-kpi-card--wide { min-width: 0; width: 100%; grid-column: span 1 / span 1; }
+            @media (min-width: 640px) {
+                .executive-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .executive-kpi-card--wide { grid-column: span 2 / span 2; }
+            }
+            @media (min-width: 1024px) {
+                .executive-kpi-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+                .executive-kpi-card { grid-column: span 2 / span 2; }
+                .executive-kpi-card--wide { grid-column: span 4 / span 4; }
+            }
+        </style>
         <section aria-label="ملخص إجمالي الأعداد لجميع المحاور">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-10">
+            <div class="executive-kpi-grid">
                 @foreach ($executiveCards as $card)
-                    <div class="{{ $spanClasses[$card['span'] ?? 'lg:col-span-3'] ?? 'lg:col-span-2' }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+                    <div class="{{ ! empty($card['wide']) ? 'executive-kpi-card--wide' : 'executive-kpi-card' }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
                         {{-- Dark Navy Header Bar --}}
                         <a
                             href="{{ route($card['route'], $card['route_params'] ?? []) }}"
