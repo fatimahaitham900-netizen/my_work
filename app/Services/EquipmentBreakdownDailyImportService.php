@@ -9,13 +9,13 @@ use App\Enums\BreakdownSeverity;
 use App\Enums\DriverStoppageStatus;
 use App\Enums\RepairStatus;
 use App\Models\EquipmentBreakdown;
+use App\Support\SimpleZipReader;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use SimpleXMLElement;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipArchive;
 
 class EquipmentBreakdownDailyImportService
 {
@@ -880,8 +880,8 @@ class EquipmentBreakdownDailyImportService
      */
     protected function parseXlsx(string $path): array
     {
-        $zip = new ZipArchive;
-        if ($zip->open($path) !== true) {
+        $zip = new SimpleZipReader;
+        if (! $zip->open($path)) {
             return [];
         }
 
@@ -933,7 +933,7 @@ class EquipmentBreakdownDailyImportService
                     $name = (string) $s['name'];
                     $state = strtolower((string) ($s['state'] ?? 'visible'));
                     $rId = (string) $s->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
-                    $target = $sheetTargets[$rId] ?? '';
+                    $target = ltrim($sheetTargets[$rId] ?? '', '/');
                     if ($target !== '') {
                         $sheets[] = [
                             'index' => $sheetIndex,
@@ -950,9 +950,8 @@ class EquipmentBreakdownDailyImportService
 
         // Fallback if workbook structure wasn't read
         if (empty($sheets)) {
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $name = $zip->getNameIndex($i);
-                if ($name !== false && str_starts_with($name, 'xl/worksheets/sheet') && str_ends_with($name, '.xml')) {
+            foreach ($zip->entryNames() as $i => $name) {
+                if (str_starts_with($name, 'xl/worksheets/sheet') && str_ends_with($name, '.xml')) {
                     $sheets[] = [
                         'index' => $i,
                         'name' => basename($name, '.xml'),
@@ -1027,8 +1026,6 @@ class EquipmentBreakdownDailyImportService
                 ];
             }
         }
-
-        $zip->close();
 
         // Return exact rows from the primary visible breakdown sheet (1-to-1 fidelity, no hidden sheet invention)
         if (! empty($breakdownSheets)) {

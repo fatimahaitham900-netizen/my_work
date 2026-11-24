@@ -23,7 +23,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::shouldBeStrict(! $this->app->isProduction());
 
-        if ($this->app->isProduction() && str_starts_with((string) config('app.url'), 'https://')) {
+        if ($this->app->isProduction() && (
+            str_starts_with((string) config('app.url'), 'https://')
+            || request()->isSecure()
+            || strtolower((string) request()->header('X-Forwarded-Proto')) === 'https'
+        )) {
             URL::forceScheme('https');
         }
 

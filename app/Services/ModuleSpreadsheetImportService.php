@@ -20,6 +20,7 @@ use App\Models\RentalEquipment;
 use App\Models\SparePartTransfer;
 use App\Models\TransportViolation;
 use App\Models\UnassignedDriver;
+use App\Support\SimpleZipReader;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,6 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use SimpleXMLElement;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipArchive;
 
 class ModuleSpreadsheetImportService
 {
@@ -813,8 +813,8 @@ class ModuleSpreadsheetImportService
      */
     protected function parseXlsx(string $path, array $dictionary): array
     {
-        $zip = new ZipArchive;
-        if ($zip->open($path) !== true) {
+        $zip = new SimpleZipReader;
+        if (! $zip->open($path)) {
             return [];
         }
 
@@ -863,7 +863,7 @@ class ModuleSpreadsheetImportService
                 foreach ($wb->sheets->sheet as $s) {
                     $state = strtolower((string) ($s['state'] ?? 'visible'));
                     $rId = (string) $s->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
-                    $target = $sheetTargets[$rId] ?? '';
+                    $target = ltrim($sheetTargets[$rId] ?? '', '/');
                     if ($target !== '' && ! in_array($state, ['hidden', 'veryhidden'], true)) {
                         $sheets[] = [
                             'isActive' => $activeTabIndex !== null && $sheetIndex === $activeTabIndex,
@@ -876,9 +876,8 @@ class ModuleSpreadsheetImportService
         }
 
         if (empty($sheets)) {
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $name = $zip->getNameIndex($i);
-                if ($name !== false && str_starts_with($name, 'xl/worksheets/sheet') && str_ends_with($name, '.xml')) {
+            foreach ($zip->entryNames() as $name) {
+                if (str_starts_with($name, 'xl/worksheets/sheet') && str_ends_with($name, '.xml')) {
                     $sheets[] = ['isActive' => false, 'target' => $name];
                 }
             }
@@ -911,8 +910,6 @@ class ModuleSpreadsheetImportService
                 $bestRows = $rows;
             }
         }
-
-        $zip->close();
 
         return $bestRows;
     }

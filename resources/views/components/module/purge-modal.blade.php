@@ -55,13 +55,12 @@
 
         <form
             method="POST"
-            action="{{ $action }}"
+            action="{{ parse_url($action, PHP_URL_PATH) ?: $action }}"
             x-data="{ purging: false }"
             @submit="purging = true"
             class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4"
         >
             @csrf
-            @method('DELETE')
 
             @foreach ($hiddenFields as $fieldName => $fieldValue)
                 @if ($fieldValue !== null && $fieldValue !== '')

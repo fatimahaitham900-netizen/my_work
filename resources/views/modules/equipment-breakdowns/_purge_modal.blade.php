@@ -46,13 +46,12 @@
 
         <form
             method="POST"
-            action="{{ route('equipment-breakdowns.purge-all') }}"
+            action="{{ route('equipment-breakdowns.purge-all', [], false) }}"
             x-data="{ purging: false }"
             @submit="purging = true"
             class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4"
         >
             @csrf
-            @method('DELETE')
 
             <button
                 type="button"
