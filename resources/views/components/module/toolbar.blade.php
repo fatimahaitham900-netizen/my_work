@@ -64,7 +64,7 @@
             @if ($showImportPurge && $createModel && auth()->user()?->can('create', $createModel))
                 <button
                     type="button"
-                    @click="purgeModalOpen = true"
+                    @click="$dispatch('open-purge-modal')"
                     class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-2.5 text-xs font-bold text-rose-800 hover:bg-rose-100 transition cursor-pointer"
                 >
                     <svg class="h-4 w-4 text-rose-700" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -75,7 +75,7 @@
 
                 <button
                     type="button"
-                    @click="importModalOpen = true"
+                    @click="$dispatch('open-import-modal')"
                     class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-2.5 text-xs font-bold text-indigo-900 hover:bg-indigo-100 transition cursor-pointer"
                 >
                     <svg class="h-4 w-4 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
