@@ -1,7 +1,12 @@
 @php
     $canEditRows = (bool) auth()->user()?->canManageDeviations();
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
 @endphp
 
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto">
     <table class="min-w-full border-collapse text-center text-base sm:text-lg">
         <thead>
@@ -11,6 +16,7 @@
                 <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة الصيانة الوقائية</th>
                 <th scope="col" class="border-e-2 border-black px-4 py-3.5 text-center font-black">نسبة انحراف الصيانة اليومية</th>
                 <th scope="col" class="px-4 py-3.5 text-center font-black">نسبة انحراف الصيانة الوقائية</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -249,10 +255,11 @@
                             </div>
                         </template>
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$item" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center">
+                    <td colspan="{{ 5 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد سجلات مطابقة</p>
                     </td>
                 </tr>
@@ -266,6 +273,9 @@
                     <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 tabular-nums">{{ $summary['preventive_maintenance_rate'] }}%</td>
                     <td class="whitespace-nowrap border-e-2 border-black px-4 py-3.5 text-blue-800 tabular-nums">{{ $summary['daily_deviation_rate'] }}%</td>
                     <td class="whitespace-nowrap px-4 py-3.5 text-rose-700 tabular-nums">{{ $summary['preventive_deviation_rate'] }}%</td>
+                    @foreach ($extraHeaders as $_)
+                        <td class="border-s-2 border-black px-3 py-3.5">—</td>
+                    @endforeach
                 </tr>
             </tfoot>
         @endif
@@ -273,3 +283,4 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif

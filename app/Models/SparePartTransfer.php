@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Database\Factories\SparePartTransferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SparePartTransfer extends Model
 {
     /** @use HasFactory<SparePartTransferFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     /**
      * @return array<string, string>

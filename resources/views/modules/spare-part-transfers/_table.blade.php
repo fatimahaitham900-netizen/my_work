@@ -1,3 +1,11 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto max-h-[74vh]">
     <table class="min-w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10 bg-slate-900 text-xs font-extrabold text-white shadow-xs">
@@ -8,6 +16,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">المعدة المنقول إليها</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-amber-500/70 bg-amber-500/20 px-4 py-3.5 text-center text-amber-200">التاريخ</th>
                 <th scope="col" class="min-w-44 border-b-2 border-slate-700 px-4 py-3.5 text-start">ملاحظة</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -55,10 +64,11 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$transfer" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
+                    <td colspan="{{ 6 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد عمليات نقل قطع غيار مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو إضافة عملية نقل جديدة.</p>
                     </td>
@@ -69,4 +79,5 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
 

@@ -1,3 +1,11 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto max-h-[76vh]">
     <table class="min-w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10 bg-slate-950 text-[13px] font-black text-white shadow-sm">
@@ -8,6 +16,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">الفرع</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">تاريخ التوقف</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-rose-500/80 bg-rose-900/60 px-4 py-4 text-center text-rose-100">أيام التوقف</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -55,10 +64,11 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$item" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
+                    <td colspan="{{ 6 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-base font-black text-slate-900">لا توجد معدات تعديل استمارة مسجلة حالياً</p>
                         <p class="mt-1 text-xs font-bold text-slate-500">يمكنك استيراد ملف Excel/CSV أو إضافة سجل جديد من الأعلى.</p>
                     </td>
@@ -69,4 +79,5 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
 

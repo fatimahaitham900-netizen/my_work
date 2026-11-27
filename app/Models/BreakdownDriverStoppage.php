@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\DriverStoppageStatus;
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Database\Factories\BreakdownDriverStoppageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -35,7 +36,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class BreakdownDriverStoppage extends Model
 {
     /** @use HasFactory<BreakdownDriverStoppageFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     public const int CRITICAL_IDLE_DAYS_THRESHOLD = 7;
 

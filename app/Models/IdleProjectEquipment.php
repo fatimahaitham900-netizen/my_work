@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Database\Factories\IdleProjectEquipmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class IdleProjectEquipment extends Model
 {
     /** @use HasFactory<IdleProjectEquipmentFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     protected $table = 'idle_project_equipment';
 

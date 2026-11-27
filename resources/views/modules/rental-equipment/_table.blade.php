@@ -1,3 +1,16 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table
+        :records="$records"
+        :headers="$exactHeaders"
+        footer-total-label="الإجمالي ({{ number_format($records->total()) }} معدة)"
+        footer-total-value="{{ number_format((float) $filteredAmountTotal, 0) }} ريال سعودي"
+    />
+@else
 <div class="overflow-x-auto max-h-[76vh]">
     <table class="min-w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10 bg-slate-950 text-[13px] font-black text-white shadow-sm">
@@ -9,6 +22,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">نوع الإيجار</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">الفرع</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-4 py-4 text-center">المشروع</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -50,10 +64,11 @@
                     <td class="whitespace-nowrap px-4 py-3.5 text-center text-sm sm:text-base font-black text-slate-950">
                         {{ $item->project ?: '—' }}
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$item" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="{{ 7 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-base font-black text-slate-900">لا توجد معدات إيجار مسجلة حالياً</p>
                         <p class="mt-1 text-xs font-bold text-slate-500">يمكنك استيراد ملف Excel/CSV أو إضافة سجل جديد من الأعلى.</p>
                     </td>
@@ -69,7 +84,7 @@
                     <td class="whitespace-nowrap border-e-2 border-slate-700 bg-emerald-700 px-4 py-4 text-center text-base sm:text-lg font-black text-white tabular-nums">
                         {{ number_format((float) $filteredAmountTotal, 0) }}
                     </td>
-                    <td colspan="3" class="px-4 py-4 text-center text-xs text-slate-300">
+                    <td colspan="{{ 3 + count($extraHeaders) }}" class="px-4 py-4 text-center text-xs text-slate-300">
                         ريال سعودي
                     </td>
                 </tr>
@@ -79,4 +94,5 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
 

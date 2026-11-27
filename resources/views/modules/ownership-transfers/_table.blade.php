@@ -1,3 +1,11 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto max-h-[76vh]">
     <table class="min-w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10 bg-slate-950 text-[13px] font-black text-white shadow-sm">
@@ -9,6 +17,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">رقم الهيكل</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e-2 border-slate-700 px-4 py-4 text-center">الحالة</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-4 py-4 text-start">ملاحظات</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -62,10 +71,11 @@
                             <span class="text-sm font-bold text-slate-900">{{ $noteText }}</span>
                         @endif
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$transfer" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="{{ 7 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-base font-black text-slate-900">لا توجد سجلات نقل ملكية مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs font-bold text-slate-500">جرب تغيير الفلاتر أو استيراد ملف جديد.</p>
                     </td>
@@ -76,3 +86,4 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif

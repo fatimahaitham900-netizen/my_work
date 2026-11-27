@@ -21,6 +21,7 @@ class FilterTransportViolationsRequest extends BaseModuleFilterRequest
     {
         return [
             ...$this->baseFilterRules(),
+            'year' => ['nullable', 'string', 'max:20'],
             'record_holder' => ['nullable', 'string', 'max:120'],
             'department' => ['nullable', 'string', 'max:120'],
             'city' => ['nullable', 'string', 'max:100'],

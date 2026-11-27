@@ -2,8 +2,18 @@
     $showMonthCol = ($activeMonth ?? 'all') === 'all';
     $colSpanBeforeAmount = $showMonthCol ? 4 : 3;
     $totalCols = $showMonthCol ? 14 : 13;
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
 @endphp
 
+@if ($exactHeaders !== [])
+    <x-module.exact-table
+        :records="$records"
+        :headers="$exactHeaders"
+        footer-total-label="الإجمالي ({{ $records->total() }} سجل)"
+        footer-total-value="{{ number_format((float) $filteredAmountTotal, 0) }} ر.س"
+    />
+@else
 <div class="overflow-x-auto max-h-[72vh]">
     <table class="min-w-full border-collapse text-[13px]">
         <thead class="sticky top-0 z-10 bg-slate-900 text-xs font-extrabold text-white shadow-xs">
@@ -24,6 +34,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ التوريد</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ الإصلاح</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3.5 py-3.5 text-center">موقف الإصلاح</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -125,10 +136,11 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$item" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $totalCols }}" class="px-6 py-12 text-center">
+                    <td colspan="{{ $totalCols + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد تحويلات دعم مالي مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الشهر أو الفلاتر أو إضافة تحويل جديد.</p>
                     </td>
@@ -144,7 +156,7 @@
                     <td class="whitespace-nowrap border-e border-emerald-500/70 bg-emerald-600/90 px-4 py-3.5 text-center text-sm font-extrabold text-white tabular-nums">
                         {{ number_format((float) $filteredAmountTotal, 0) }} ر.س
                     </td>
-                    <td colspan="9" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
+                    <td colspan="{{ 9 + count($extraHeaders) }}" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
                         يتم احتساب إجمالي المبالغ المعروضة وفق الشهر والفلاتر النشطة حالياً
                     </td>
                 </tr>
@@ -154,4 +166,5 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
 

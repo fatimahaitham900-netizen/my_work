@@ -10,7 +10,17 @@
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full overflow-x-hidden bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
+<body
+    class="h-full overflow-x-hidden bg-slate-50 text-slate-900 antialiased"
+    x-data="{
+        sidebarOpen: false,
+        sidebarCollapsed: localStorage.getItem('exec_sidebar_collapsed') === '1',
+        toggleSidebarDesktop() {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+            localStorage.setItem('exec_sidebar_collapsed', this.sidebarCollapsed ? '1' : '0');
+        }
+    }"
+>
     @php
         $user = auth()->user();
         $alerts = $navAlerts ?? [
@@ -55,6 +65,13 @@
                 'label' => 'الأوراق النظامية',
                 'route' => 'regulatory-documents.index',
                 'active' => request()->routeIs('regulatory-documents.*'),
+                'icon' => 'document',
+            ],
+            [
+                'key' => 'car_regulatory_documents',
+                'label' => 'الأوراق النظامية للسيارات',
+                'route' => 'car-regulatory-documents.index',
+                'active' => request()->routeIs('car-regulatory-documents.*'),
                 'icon' => 'document',
             ],
             [
@@ -113,6 +130,27 @@
                 'active' => request()->routeIs('registration-amendments.*'),
                 'icon' => 'registration-amendment',
             ],
+            [
+                'key' => 'equipment_distributions',
+                'label' => 'توزيعة المعدات',
+                'route' => 'equipment-distributions.index',
+                'active' => request()->routeIs('equipment-distributions.*'),
+                'icon' => 'equipment-distribution',
+            ],
+            [
+                'key' => 'drivers',
+                'label' => 'السائقين',
+                'route' => 'drivers.index',
+                'active' => request()->routeIs('drivers.*'),
+                'icon' => 'drivers',
+            ],
+            [
+                'key' => 'accident_claims',
+                'label' => 'الحوادث ومطالبة التأمين',
+                'route' => 'accident-claims.index',
+                'active' => request()->routeIs('accident-claims.*'),
+                'icon' => 'accident-claims',
+            ],
         ];
 
         $isAnyReportActive = collect($reportItems)->contains('active', true);
@@ -135,12 +173,12 @@
 
     {{-- Executive RTL Sidebar --}}
     <aside
-        :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'"
+        :class="(sidebarOpen ? 'translate-x-0' : 'translate-x-full') + (sidebarCollapsed ? ' lg:translate-x-full' : ' lg:translate-x-0')"
         class="fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-slate-950 text-slate-100 border-e border-slate-800/80 transition-transform duration-200 ease-out"
         aria-label="القائمة الرئيسية"
     >
         {{-- Brand Header --}}
-        <div class="flex h-20 items-center justify-between px-5 border-b border-slate-800/80">
+        <div class="flex h-20 items-center justify-between gap-2 px-4 border-b border-slate-800/80">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3 min-w-0">
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-950/50">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -152,6 +190,18 @@
                     <p class="truncate text-[11px] text-slate-400 mt-0.5">مؤشرات المكتب التنفيذي</p>
                 </div>
             </a>
+
+            <button
+                type="button"
+                @click="toggleSidebarDesktop()"
+                class="hidden lg:inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-white transition cursor-pointer"
+                title="طي القائمة الجانبية"
+                aria-label="طي القائمة الجانبية"
+            >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+            </button>
 
             <button
                 type="button"
@@ -304,6 +354,21 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                             </svg>
                                             @break
+                                        @case('equipment-distribution')
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                            </svg>
+                                            @break
+                                        @case('drivers')
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                            </svg>
+                                            @break
+                                        @case('accident-claims')
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
+                                            </svg>
+                                            @break
                                     @endswitch
                                 </span>
                                 <span class="truncate">{{ $item['label'] }}</span>
@@ -350,15 +415,18 @@
     </aside>
 
     {{-- Main Shell --}}
-    <div class="flex min-h-screen min-w-0 flex-col lg:ps-64">
+    <div
+        :class="sidebarCollapsed ? 'lg:ps-0' : 'lg:ps-64'"
+        class="flex min-h-screen min-w-0 flex-col transition-all duration-200 ease-out"
+    >
         {{-- Sticky Top Header (Matching Sidebar Dark Slate-950) --}}
-        <header class="sticky top-0 z-30 grid h-20 grid-cols-3 items-center gap-3 border-b border-slate-800/80 bg-slate-950 px-4 sm:px-6 lg:px-8 text-white shadow-sm">
-            {{-- Start (Right in RTL): Mobile menu toggle + Page Title on sub-pages --}}
-            <div class="flex items-center gap-3 min-w-0 justify-self-start">
+        <header class="sticky top-0 z-30 grid h-16 sm:h-20 grid-cols-3 items-center gap-2 sm:gap-3 border-b border-slate-800/80 bg-slate-950 px-3 sm:px-6 lg:px-8 text-white shadow-sm">
+            {{-- Start (Right in RTL): Sidebar collapse/expand toggle + Page Title on sub-pages --}}
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 justify-self-start">
                 <button
                     type="button"
                     @click="sidebarOpen = true"
-                    class="lg:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 text-slate-200 hover:bg-slate-800"
+                    class="lg:hidden inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/90 text-slate-200 hover:bg-slate-800 cursor-pointer"
                     aria-label="فتح القائمة"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -366,8 +434,21 @@
                     </svg>
                 </button>
 
+                <button
+                    type="button"
+                    @click="toggleSidebarDesktop()"
+                    class="hidden lg:inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-700/90 bg-slate-900/90 px-3 text-xs font-extrabold text-slate-100 hover:border-emerald-500/60 hover:bg-slate-800 transition cursor-pointer"
+                    :title="sidebarCollapsed ? 'إظهار القائمة الجانبية' : 'طي القائمة الجانبية'"
+                    aria-label="طي أو إظهار القائمة الجانبية"
+                >
+                    <svg class="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                    <span x-text="sidebarCollapsed ? 'القائمة' : 'طي القائمة'">طي القائمة</span>
+                </button>
+
                 @if (! request()->routeIs('dashboard'))
-                    <div class="min-w-0">
+                    <div class="hidden sm:block min-w-0">
                         <h1 class="truncate text-base sm:text-lg font-extrabold text-white">@yield('page_title')</h1>
                         <p class="hidden md:block truncate text-xs text-slate-400">@yield('page_subtitle')</p>
                     </div>
@@ -376,19 +457,25 @@
 
             {{-- Center: المكتب التنفيذي --}}
             <div class="justify-self-center text-center min-w-0">
-                <h1 class="truncate text-2xl sm:text-3xl font-black tracking-tight text-white">المكتب التنفيذي</h1>
+                <h1 class="truncate text-lg sm:text-3xl font-black tracking-tight text-white">المكتب التنفيذي</h1>
             </div>
 
             {{-- End (Far Left in RTL): هيثم نبيل --}}
             <div class="justify-self-end shrink-0">
-                <span class="inline-flex items-center rounded-xl border border-slate-700/80 bg-slate-900/90 px-4 py-1.5 text-lg sm:text-2xl font-black text-white shadow-xs">
+                <span class="inline-flex items-center rounded-lg sm:rounded-xl border border-slate-700/80 bg-slate-900/90 px-2.5 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-2xl font-black text-white shadow-xs">
                     هيثم نبيل
                 </span>
             </div>
         </header>
 
         {{-- Page Body --}}
-        <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+        <main class="flex-1 min-w-0 p-3 sm:p-6 lg:p-8">
+            @if (! request()->routeIs('dashboard'))
+                <div class="mb-3 sm:hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xs">
+                    <h1 class="text-base font-black text-slate-950">@yield('page_title')</h1>
+                    <p class="mt-0.5 text-xs font-semibold text-slate-500">@yield('page_subtitle')</p>
+                </div>
+            @endif
             @if (session('status'))
                 <div class="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
                     <svg class="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

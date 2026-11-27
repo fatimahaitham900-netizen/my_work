@@ -100,52 +100,76 @@
     >
         {{-- Daily Import Preview & Comparison Panel (يظهر عند وجود ملف مرفوع للمعاينة) --}}
         @include('modules.equipment-breakdowns._import_preview', ['preview' => $importPreview ?? null])
-        {{-- View Mode Switcher Bar (طريقة العرض) --}}
-        <section class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-sm sm:text-base font-extrabold text-slate-900">طريقة العرض</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">بدّل بين الجدول التفصيلي، أو ملخص الورش والأعداد حسب الموقف والنسبة، أو حسب نوع المعدة</p>
+        {{-- View Mode Switcher Cards (طريقة العرض) --}}
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <button
+                type="button"
+                @click="viewMode = 'list'"
+                :class="viewMode === 'list' ? 'border-slate-950 bg-slate-950 text-white shadow-lg ring-4 ring-slate-950/15' : 'border-slate-300 bg-white text-slate-900 shadow-xs hover:border-slate-900 hover:bg-slate-50 hover:shadow-md'"
+                class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 text-start transition-all cursor-pointer"
+            >
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors" :class="viewMode === 'list' ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-900 group-hover:bg-slate-900 group-hover:text-white'">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-base sm:text-lg font-black leading-tight">العرض التفصيلي</p>
+                        <p class="mt-1 text-xs font-bold" :class="viewMode === 'list' ? 'text-slate-300' : 'text-slate-500'">الجدول الكامل للأعطال والورش</p>
+                    </div>
                 </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        @click="viewMode = 'list'"
-                        :class="viewMode === 'list' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white'"
-                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition cursor-pointer"
-                    >
-                        <span>العرض التفصيلي</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums" :class="viewMode === 'list' ? 'bg-rose-500/30 text-rose-100' : 'bg-slate-200/80 text-slate-700'">
-                            {{ $kpis['total'] }}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        @click="viewMode = 'by_status'"
-                        :class="viewMode === 'by_status' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white'"
-                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition cursor-pointer"
-                    >
-                        <span>عرض حسب الموقف (الموقف × الورش)</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums" :class="viewMode === 'by_status' ? 'bg-emerald-500/30 text-emerald-100' : 'bg-slate-200/80 text-slate-700'">
-                            {{ count($statusMatrix['rows']) }}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        @click="viewMode = 'by_equipment_name'"
-                        :class="viewMode === 'by_equipment_name' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white'"
-                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition cursor-pointer"
-                    >
-                        <span>عرض حسب نوع المعدة (المعدة × الورش)</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums" :class="viewMode === 'by_equipment_name' ? 'bg-sky-500/30 text-sky-100' : 'bg-slate-200/80 text-slate-700'">
-                            {{ count($equipmentMatrix['rows']) }}
-                        </span>
-                    </button>
+                <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center" :class="viewMode === 'list' ? 'bg-rose-500/25 text-rose-100' : 'bg-slate-100 text-slate-950'">
+                    <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ number_format((int) $kpis['total']) }}</p>
+                    <p class="mt-1 text-[11px] font-extrabold" :class="viewMode === 'list' ? 'text-rose-200' : 'text-slate-500'">معدة</p>
                 </div>
-            </div>
+            </button>
+
+            <button
+                type="button"
+                @click="viewMode = 'by_status'"
+                :class="viewMode === 'by_status' ? 'border-emerald-800 bg-emerald-700 text-white shadow-lg ring-4 ring-emerald-700/15' : 'border-emerald-300 bg-emerald-50/40 text-slate-900 shadow-xs hover:border-emerald-700 hover:bg-emerald-50 hover:shadow-md'"
+                class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 text-start transition-all cursor-pointer"
+            >
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors" :class="viewMode === 'by_status' ? 'bg-white/15 text-white' : 'bg-emerald-100 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white'">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-base sm:text-lg font-black leading-tight">عرض حسب الموقف (الموقف × الورش)</p>
+                        <p class="mt-1 text-xs font-bold" :class="viewMode === 'by_status' ? 'text-emerald-100' : 'text-emerald-900/75'">ملخص الورش والأعداد حسب الموقف والنسبة</p>
+                    </div>
+                </div>
+                <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center" :class="viewMode === 'by_status' ? 'bg-white/15 text-white' : 'bg-emerald-100 text-emerald-900'">
+                    <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ count($statusMatrix['rows']) }}</p>
+                    <p class="mt-1 text-[11px] font-extrabold" :class="viewMode === 'by_status' ? 'text-emerald-100' : 'text-emerald-800'">موقف</p>
+                </div>
+            </button>
+
+            <button
+                type="button"
+                @click="viewMode = 'by_equipment_name'"
+                :class="viewMode === 'by_equipment_name' ? 'border-sky-800 bg-sky-700 text-white shadow-lg ring-4 ring-sky-700/15' : 'border-sky-300 bg-sky-50/40 text-slate-900 shadow-xs hover:border-sky-700 hover:bg-sky-50 hover:shadow-md'"
+                class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 text-start transition-all cursor-pointer"
+            >
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors" :class="viewMode === 'by_equipment_name' ? 'bg-white/15 text-white' : 'bg-sky-100 text-sky-800 group-hover:bg-sky-700 group-hover:text-white'">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-base sm:text-lg font-black leading-tight">عرض حسب نوع المعدة (المعدة × الورش)</p>
+                        <p class="mt-1 text-xs font-bold" :class="viewMode === 'by_equipment_name' ? 'text-sky-100' : 'text-sky-900/75'">توزيع الأعطال حسب نوع المعدة والورش</p>
+                    </div>
+                </div>
+                <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center" :class="viewMode === 'by_equipment_name' ? 'bg-white/15 text-white' : 'bg-sky-100 text-sky-900'">
+                    <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ count($equipmentMatrix['rows']) }}</p>
+                    <p class="mt-1 text-[11px] font-extrabold" :class="viewMode === 'by_equipment_name' ? 'text-sky-100' : 'text-sky-800'">نوع</p>
+                </div>
+            </button>
         </section>
 
         {{-- Action & Filter Toolbar --}}

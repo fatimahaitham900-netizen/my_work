@@ -13,6 +13,7 @@
             'initialExportUrl' => route('transport-violations.export', array_filter($filters)),
             'initialFilters' => [
                 'search' => $filters['search'] ?? '',
+                'year' => $filters['year'] ?? '',
                 'record_holder' => $filters['record_holder'] ?? '',
                 'department' => $filters['department'] ?? '',
                 'city' => $filters['city'] ?? '',
@@ -23,6 +24,7 @@
             ],
             'defaultFilters' => [
                 'search' => '',
+                'year' => '',
                 'record_holder' => '',
                 'department' => '',
                 'city' => '',
@@ -80,6 +82,16 @@
             create-label="إضافة مخالفة جديدة"
             :show-import-purge="true"
         >
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">السنة</label>
+                <select x-model="filters.year" @change="applyFilters()" class="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-slate-900 focus:outline-none">
+                    <option value="">جميع السنوات</option>
+                    @foreach ($options['years'] ?? [] as $yr)
+                        <option value="{{ $yr }}">{{ $yr }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div>
                 <label class="block text-[11px] font-bold text-slate-600 mb-1">السجل</label>
                 <select x-model="filters.record_holder" @change="applyFilters()" class="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-slate-900 focus:outline-none">

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\ComplianceStatus;
 use App\Enums\RegulatoryEntityType;
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Carbon\CarbonInterface;
 use Database\Factories\RegulatoryDocumentFactory;
@@ -36,7 +37,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class RegulatoryDocument extends Model
 {
     /** @use HasFactory<RegulatoryDocumentFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     public const int EXPIRING_SOON_DAYS_THRESHOLD = 30;
 
@@ -160,6 +161,17 @@ class RegulatoryDocument extends Model
     {
         return $query
             ->where('document_type', 'استمارة')
+            ->where('compliance_status', ComplianceStatus::Expired->value);
+    }
+
+    /**
+     * @param  Builder<RegulatoryDocument>  $query
+     * @return Builder<RegulatoryDocument>
+     */
+    public function scopeExpiredInsurances(Builder $query): Builder
+    {
+        return $query
+            ->where('document_type', 'تأمين')
             ->where('compliance_status', ComplianceStatus::Expired->value);
     }
 }

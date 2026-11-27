@@ -8,8 +8,12 @@ use App\Enums\DriverStoppageStatus;
 use App\Enums\OwnershipTransferStatus;
 use App\Enums\RegulatoryEntityType;
 use App\Enums\UnassignedDriverStatus;
+use App\Models\AccidentClaim;
 use App\Models\BreakdownDriverStoppage;
 use App\Models\CarBreakdown;
+use App\Models\CarRegulatoryDocument;
+use App\Models\Driver;
+use App\Models\EquipmentDistribution;
 use App\Models\FinancialSupportTransfer;
 use App\Models\IdleProjectEquipment;
 use App\Models\MaintenanceDeviation;
@@ -20,6 +24,7 @@ use App\Models\RentalEquipment;
 use App\Models\SparePartTransfer;
 use App\Models\TransportViolation;
 use App\Models\UnassignedDriver;
+use App\Support\ExtraColumns;
 use App\Support\SimpleZipReader;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -61,7 +66,10 @@ class ModuleSpreadsheetImportService
             }
         }
 
-        if (empty($headerMap)) {
+        $headerRow = $rawRows[$headerRowIndex] ?? [];
+        $exactHeaderMap = $this->buildExactHeaderMap($headerRow);
+
+        if (empty($headerMap) && empty($exactHeaderMap)) {
             return ['imported' => 0, 'deleted' => 0];
         }
 
@@ -69,7 +77,7 @@ class ModuleSpreadsheetImportService
         $recordsToInsert = [];
 
         foreach ($dataRows as $rowValues) {
-            $mapped = $this->mapRow($module, $config, $headerMap, $rowValues, $context);
+            $mapped = $this->mapRow($module, $config, $headerMap, $rowValues, $context, $exactHeaderMap);
             if ($mapped !== null) {
                 $recordsToInsert[] = $mapped;
             }
@@ -86,8 +94,10 @@ class ModuleSpreadsheetImportService
             $deleteQuery = $modelClass::query();
 
             // Scoped replacement when user imports under a specific tab (e.g. Regulatory Document Type or Financial Support Month)
-            if ($module === 'regulatory-documents' && ! empty($context['document_type'])) {
+            if (in_array($module, ['regulatory-documents', 'car-regulatory-documents'], true) && ! empty($context['document_type'])) {
                 $deleteQuery->where('document_type', (string) $context['document_type']);
+            } elseif ($module === 'accident-claims' && ! empty($context['record_type'])) {
+                $deleteQuery->where('record_type', (string) $context['record_type']);
             } elseif ($module === 'financial-support' && ! empty($context['support_month'])) {
                 $deleteQuery->where('support_month', (int) $context['support_month']);
                 if (! empty($context['support_year'])) {
@@ -99,6 +109,10 @@ class ModuleSpreadsheetImportService
 
             foreach ($recordsToInsert as $attributes) {
                 $modelClass::query()->create($attributes);
+            }
+
+            if (in_array($module, ['drivers', 'equipment-distributions'], true)) {
+                app(DriverService::class)->syncBranchAndSiteFromDistributions();
             }
 
             DashboardService::clearCache();
@@ -124,8 +138,10 @@ class ModuleSpreadsheetImportService
         return DB::transaction(static function () use ($modelClass, $module, $context): int {
             $query = $modelClass::query();
 
-            if ($module === 'regulatory-documents' && ! empty($context['document_type'])) {
+            if (in_array($module, ['regulatory-documents', 'car-regulatory-documents'], true) && ! empty($context['document_type'])) {
                 $query->where('document_type', (string) $context['document_type']);
+            } elseif ($module === 'accident-claims' && ! empty($context['record_type'])) {
+                $query->where('record_type', (string) $context['record_type']);
             } elseif ($module === 'financial-support' && ! empty($context['support_month'])) {
                 $query->where('support_month', (int) $context['support_month']);
                 if (! empty($context['support_year'])) {
@@ -411,8 +427,162 @@ class ModuleSpreadsheetImportService
                 'template_sample' => ['1', 'DT_000033', 'قلاب', 'نجران', now()->subDays(10)->format('Y-m-d')],
             ],
 
+            'car-regulatory-documents' => [
+                'model' => CarRegulatoryDocument::class,
+                'dictionary' => [
+                    'document_type' => ['نوع الوثيقة', 'الوثيقة', 'document_type'],
+                    'car_code' => ['كود السيارة', 'كود السياره', 'الكود', 'كود', 'car_code', 'code'],
+                    'plate_number' => ['رقم اللوحة', 'رقم اللوحه', 'اللوحة', 'اللوحه', 'plate_number'],
+                    'car_type_model' => ['نوع السيارة والموديل', 'نوع السياره والموديل', 'النوع والموديل', 'نوع السيارة', 'السيارة', 'car_type_model'],
+                    'branch' => ['الفرع', 'الفرع الحالي', 'branch'],
+                    'project_location' => ['المشروع / الموقع', 'المشروع', 'الموقع', 'project_location', 'location'],
+                    'hijri_expiry_date' => ['تاريخ الانتهاء (هجري)', 'تاريخ الانتهاء هجري', 'التاريخ الهجري', 'هجري', 'hijri_expiry_date'],
+                    'expiry_date' => ['تاريخ الانتهاء (ميلادي)', 'تاريخ الانتهاء ميلادي', 'تاريخ الانتهاء', 'الميلادي', 'ميلادي', 'expiry_date'],
+                    'status_label' => ['الأيام وحالة الفحص الدوري', 'الأيام وحالة الاستمارة', 'الأيام وحالة التأمين', 'الأيام والحالة', 'الحالة', 'status_label'],
+                    'notes' => ['ملاحظات', 'الملاحظات', 'notes'],
+                ],
+                'dates' => ['expiry_date'],
+                'template_headers' => ['م', 'كود السيارة', 'رقم اللوحة', 'نوع السيارة والموديل', 'الفرع', 'المشروع / الموقع', 'تاريخ الانتهاء (هجري)', 'تاريخ الانتهاء (ميلادي)'],
+                'template_sample' => ['1', 'C_000205', 'أ ل ر 9882', 'تويوتا هايلكس غمارتين (2018)', 'أبها', 'مشروع باللحمر', '1447-10-21', now()->subDays(30)->format('Y-m-d')],
+            ],
+
+            'equipment-distributions' => [
+                'model' => EquipmentDistribution::class,
+                'dictionary' => [
+                    'equipment_code' => ['كود المعدة', 'كود المعده', 'الكود', 'كود', 'رقم المعدة', 'equipment_code', 'code'],
+                    'equipment_type' => ['نوع المعدة', 'نوع المعده', 'المعدة', 'المعده', 'النوع', 'equipment_type', 'type'],
+                    'branch' => ['الفرع', 'الفرع الحالي', 'المنطقة', 'branch'],
+                    'site_location' => ['الموقع', 'المشروع', 'المشروع / الموقع', 'موقع العمل', 'site_location', 'location'],
+                    'equipment_status' => ['حالة المعدة', 'حالة المعده', 'الحالة', 'الحاله', 'الموقف', 'equipment_status', 'status'],
+                    'notes' => ['ملاحظه', 'ملاحظة', 'ملاحظات', 'الملاحظات', 'notes'],
+                ],
+                'template_headers' => ['نوع المعدة', 'الفرع', 'الموقع', 'حالة المعدة', 'ملاحظه'],
+                'template_sample' => ['حفارات', 'نجران', 'تشغيل نجران', 'تم تشغيلها ساعة أو أكثر', 'بدون عمل فعلي'],
+            ],
+
+            'drivers' => [
+                'model' => Driver::class,
+                'dictionary' => [
+                    'equipment_code' => ['كود المعدة', 'كود المعده', 'الكود', 'كود', 'رقم المعدة', 'equipment_code', 'code'],
+                    'branch' => ['الفرع', 'الفرع الحالي', 'المنطقة', 'branch'],
+                    'site_location' => ['الموقع', 'المشروع', 'المشروع / الموقع', 'site_location', 'location'],
+                    'driver_name' => ['اسم السائق', 'السائق', 'الاسم', 'driver_name', 'name'],
+                    'employee_id' => ['الرقم الوظيفي', 'رقم وظيفي', 'employee_id'],
+                    'job_title' => ['المهنة', 'المهنه', 'الوظيفة', 'الوظيفه', 'job_title'],
+                    'nationality' => ['الجنسية', 'الجنسيه', 'nationality'],
+                    'salary' => ['الراتب', 'المرتب', 'الأجر', 'salary'],
+                    'sponsor' => ['الكفيل', 'الكفالة', 'الكفاله', 'sponsor'],
+                    'notes' => ['ملاحظات', 'ملاحظة', 'ملاحظه', 'notes'],
+                ],
+                'decimals' => ['salary'],
+                'template_headers' => ['كود المعدة', 'الفرع', 'الموقع', 'اسم السائق', 'الرقم الوظيفي', 'المهنة', 'الجنسية', 'الراتب', 'الكفيل'],
+                'template_sample' => ['AP_000008', '', '', 'خالد حسن عنقاد', '5141', 'سائق فرادة اسفلت', 'Yemen', '4051', 'كفاله شركة'],
+            ],
+
+            'accident-claims' => [
+                'model' => AccidentClaim::class,
+                'dictionary' => [
+                    'vehicle_code' => ['كود السيارة', 'كود السياره', 'كود المعدة', 'كود المركبة', 'الكود', 'كود', 'vehicle_code', 'code'],
+                    'user_code' => ['كود المستخدم', 'رقم المستخدم', 'المستخدم', 'user_code'],
+                    'plate_number' => ['رقم اللوحة', 'اللوحة', 'رقم اللوحه', 'plate_number', 'plate'],
+                    'accident_date' => ['تاريخ الحادث', 'التاريخ', 'accident_date', 'date'],
+                    'accident_location' => ['موقع الحادث', 'الموقع', 'المكان', 'accident_location', 'location'],
+                    'branch' => ['الفرع', 'الفرع الحالي', 'branch'],
+                    'record_holder' => ['السجل', 'صاحب السجل', 'record_holder'],
+                    'driver_name' => ['السائق', 'اسم السائق', 'driver_name', 'driver'],
+                    'employee_id' => ['الرقم الوظيفي', 'رقم وظيفي', 'employee_id'],
+                    'najm_report_number' => ['رقم تقرير نجم', 'تقرير نجم', 'رقم نجم', 'najm_report_number'],
+                    'claim_number' => ['رقم المطالبة', 'رقم المطالبه', 'المطالبة', 'claim_number'],
+                    'insurance_company' => ['شركة التأمين', 'شركة التامين', 'التأمين', 'insurance_company'],
+                    'fault_percentage' => ['نسبة المسؤولية', 'نسبة الخطأ', 'المسؤولية', 'fault_percentage'],
+                    'estimated_cost' => ['التكلفة', 'التكلفة التقديرية', 'التقدير', 'estimated_cost', 'cost'],
+                    'compensation_amount' => ['التعويض', 'مبلغ التعويض', 'قيمة التعويض', 'compensation_amount'],
+                    'claim_status' => ['حالة الحادث', 'حالة المطالبة', 'الحالة', 'الموقف', 'claim_status', 'status'],
+                    'notes' => ['ملاحظات', 'ملاحظة', 'ملاحظه', 'notes'],
+                ],
+                'dates' => ['accident_date'],
+                'integers' => ['fault_percentage'],
+                'decimals' => ['estimated_cost', 'compensation_amount'],
+                'template_headers' => ['م', 'كود المستخدم', 'الفرع', 'السجل', 'ملاحظات'],
+                'template_sample' => ['1', 'C_000120', 'الرياض', 'شركة المقاولات', 'حادث بسيط تم التقييم'],
+            ],
+
             default => throw new InvalidArgumentException("Unsupported import module: {$module}"),
         };
+    }
+
+    /**
+     * Build map of unmapped/new column indexes to their original header labels.
+     *
+     * @param  list<string>  $headers
+     * @param  array<int, string>  $knownHeaderMap
+     * @return array<int, string>
+     */
+    protected function buildExtraHeaderMap(array $headers, array $knownHeaderMap): array
+    {
+        $extraMap = [];
+        $usedLabels = [];
+        $ignoredHeaders = ['م', 'م.', '#', 'ت', 'no', 'no.', 'sn', 's/n', 'id', 'تسلسل'];
+
+        foreach ($headers as $colIndex => $rawHeader) {
+            if (isset($knownHeaderMap[$colIndex])) {
+                continue;
+            }
+
+            $label = trim(preg_replace('/\s+/u', ' ', (string) $rawHeader) ?? '');
+            if ($label === '') {
+                continue;
+            }
+
+            $normalized = mb_strtolower($this->cleanHeaderString($label));
+            if ($normalized === '' || in_array($normalized, $ignoredHeaders, true)) {
+                continue;
+            }
+
+            // Ensure unique key if duplicate extra header names exist in file
+            $uniqueLabel = $label;
+            $suffix = 2;
+            while (isset($usedLabels[$uniqueLabel])) {
+                $uniqueLabel = "{$label} ({$suffix})";
+                $suffix++;
+            }
+
+            $usedLabels[$uniqueLabel] = true;
+            $extraMap[$colIndex] = $uniqueLabel;
+        }
+
+        return $extraMap;
+    }
+
+    /**
+     * Collect every non-empty header column in the exact order it appears in the uploaded spreadsheet.
+     *
+     * @param  list<string>  $headers
+     * @return array<int, string>
+     */
+    protected function buildExactHeaderMap(array $headers): array
+    {
+        $exactMap = [];
+        $usedLabels = [];
+
+        foreach ($headers as $colIndex => $rawHeader) {
+            $label = trim(preg_replace('/\s+/u', ' ', (string) $rawHeader) ?? '');
+            if ($label === '') {
+                continue;
+            }
+
+            $uniqueLabel = $label;
+            $suffix = 2;
+            while (isset($usedLabels[$uniqueLabel])) {
+                $uniqueLabel = "{$label} ({$suffix})";
+                $suffix++;
+            }
+
+            $usedLabels[$uniqueLabel] = true;
+            $exactMap[$colIndex] = $uniqueLabel;
+        }
+
+        return $exactMap;
     }
 
     /**
@@ -422,18 +592,39 @@ class ModuleSpreadsheetImportService
      * @param  array<int, string>  $headerMap
      * @param  list<string>  $row
      * @param  array<string, mixed>  $context
+     * @param  array<int, string>  $exactHeaderMap
      * @return array<string, mixed>|null
      */
-    protected function mapRow(string $module, array $config, array $headerMap, array $row, array $context): ?array
+    protected function mapRow(string $module, array $config, array $headerMap, array $row, array $context, array $exactHeaderMap = []): ?array
     {
         $raw = [];
         foreach ($headerMap as $colIndex => $attrKey) {
             $raw[$attrKey] = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : '';
         }
 
+        $dateFields = $config['dates'] ?? [];
+        $exactColumns = [];
+        foreach ($exactHeaderMap as $colIndex => $exactLabel) {
+            $val = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : '';
+            if ($val === '' || $val === '—' || $val === '-') {
+                $exactColumns[$exactLabel] = '';
+
+                continue;
+            }
+
+            $mappedAttr = $headerMap[$colIndex] ?? null;
+            if ($mappedAttr !== null && in_array($mappedAttr, $dateFields, true) && is_numeric($val)) {
+                $parsed = $this->parseDate($val);
+                $exactColumns[$exactLabel] = $parsed ?? $val;
+            } else {
+                $exactColumns[$exactLabel] = $val;
+            }
+        }
+
         // Skip completely empty rows
         $nonEmptyValues = array_filter($raw, static fn (string $v): bool => $v !== '' && $v !== '—' && $v !== '-');
-        if (empty($nonEmptyValues)) {
+        $nonEmptyExact = array_filter($exactColumns, static fn (string $v): bool => $v !== '');
+        if (empty($nonEmptyValues) && empty($nonEmptyExact)) {
             return null;
         }
 
@@ -523,6 +714,12 @@ class ModuleSpreadsheetImportService
             } else {
                 $attributes['row_type'] = 'active';
             }
+        } elseif ($module === 'car-regulatory-documents') {
+            if (empty($attributes['document_type'])) {
+                $attributes['document_type'] = ! empty($context['document_type'])
+                    ? (string) $context['document_type']
+                    : CarRegulatoryDocument::TYPE_INSPECTION;
+            }
         } elseif ($module === 'car-breakdowns') {
             $attributes['vehicle_category'] = CarBreakdown::resolveCategory(
                 isset($attributes['vehicle_category']) ? (string) $attributes['vehicle_category'] : null,
@@ -539,11 +736,25 @@ class ModuleSpreadsheetImportService
                 || trim((string) ($attributes['project'] ?? '')) !== '';
 
             // Skip Excel footer SUM rows that only contain a numeric total in rental_amount
-            if (! $hasDescriptor) {
+            if (! empty($headerMap) && ! $hasDescriptor) {
                 return null;
             }
 
             $attributes['rental_amount'] = $attributes['rental_amount'] ?? 0;
+        } elseif ($module === 'drivers') {
+            $attributes['salary'] = $attributes['salary'] ?? 0;
+        } elseif ($module === 'accident-claims') {
+            $attributes['record_type'] = ! empty($context['record_type'])
+                ? (string) $context['record_type']
+                : AccidentClaim::TYPE_ACCIDENT;
+            $attributes['estimated_cost'] = $attributes['estimated_cost'] ?? 0;
+            $attributes['compensation_amount'] = $attributes['compensation_amount'] ?? 0;
+        }
+
+        if (! empty($exactHeaderMap)) {
+            $attributes['extra_columns'] = [
+                ExtraColumns::EXACT_KEY => $exactColumns,
+            ];
         }
 
         return $attributes;

@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\BreakdownCategory;
 use App\Enums\BreakdownSeverity;
 use App\Enums\RepairStatus;
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Carbon\Carbon;
 use Database\Factories\EquipmentBreakdownFactory;
@@ -39,7 +40,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class EquipmentBreakdown extends Model
 {
     /** @use HasFactory<EquipmentBreakdownFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     /**
      * @return array<string, string>

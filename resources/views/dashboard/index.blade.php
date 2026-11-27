@@ -6,6 +6,7 @@
 @section('content')
     @php
         $executiveCards = $summary['executive_cards'] ?? [];
+        $transportViolationYearCards = $summary['transport_violation_year_cards'] ?? [];
         $financialSupport = $summary['financial_support_summary'] ?? null;
 
         $spanClasses = [
@@ -28,10 +29,10 @@
         ];
     @endphp
 
-    <div class="space-y-6">
-        {{-- Executive Centered Title & Automatic Date Banner (Optimized for Large Display Screens) --}}
+    <div class="space-y-4 sm:space-y-6">
+        {{-- Executive Centered Title & Automatic Date Banner (Optimized for Mobile & Large Display Screens) --}}
         <section
-            class="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-7 sm:py-9 text-white shadow-xl shadow-slate-900/10"
+            class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-slate-950 px-4 py-5 sm:px-6 sm:py-9 text-white shadow-xl shadow-slate-900/10"
             x-data="{
                 formattedDate: @js(now()->locale('ar')->translatedFormat('l').' — '.now()->format('d/m/Y')),
                 updateDate() {
@@ -51,13 +52,13 @@
             <div class="pointer-events-none absolute -top-24 end-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
             <div class="pointer-events-none absolute -bottom-24 start-16 h-64 w-64 rounded-full bg-rose-500/10 blur-3xl"></div>
 
-            <div class="relative flex flex-col items-center justify-center text-center gap-3.5">
-                <h2 class="text-3xl sm:text-5xl font-black tracking-tight text-white">
+            <div class="relative flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5">
+                <h2 class="text-2xl sm:text-5xl font-black tracking-tight text-white">
                     مؤشرات إدارة المعدات
                 </h2>
 
-                <div class="inline-flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-2 text-base sm:text-xl font-black text-emerald-300 ring-1 ring-inset ring-white/20 tabular-nums">
-                    <svg class="h-6 w-6 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <div class="inline-flex items-center gap-2 sm:gap-2.5 rounded-full bg-white/10 px-4 py-1.5 sm:px-6 sm:py-2 text-sm sm:text-xl font-black text-emerald-300 ring-1 ring-inset ring-white/20 tabular-nums">
+                    <svg class="h-4 w-4 sm:h-6 sm:w-6 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                     </svg>
                     <span x-text="formattedDate">{{ now()->locale('ar')->translatedFormat('l').' — '.now()->format('d/m/Y') }}</span>
@@ -65,28 +66,107 @@
             </div>
         </section>
 
-        {{-- Executive Ruled Summary Boxes (5 Columns Per Row — Locked Universal CSS Grid) --}}
+        {{-- Executive Ruled Summary Boxes (Compact Top 3 Grouped Cards + Responsive 2-Col Mobile / 5-Col Desktop Grid) --}}
         <style>
-            .executive-kpi-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1rem; width: 100%; }
-            .executive-kpi-card, .executive-kpi-card--wide { min-width: 0; width: 100%; grid-column: span 1 / span 1; }
+            .executive-top-groups { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 0.75rem; width: 100%; }
+            .executive-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; width: 100%; }
+            .executive-kpi-card { min-width: 0; width: 100%; grid-column: span 1 / span 1; }
+            .executive-kpi-card--mobile-full, .executive-kpi-card--four, .executive-kpi-card--wide, .executive-kpi-card--triple, .executive-kpi-card--quad, .executive-kpi-card--full { min-width: 0; width: 100%; grid-column: span 2 / span 2; }
+            .executive-violations-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 0.85rem; width: 100%; }
             @media (min-width: 640px) {
-                .executive-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-                .executive-kpi-card--wide { grid-column: span 2 / span 2; }
+                .executive-top-groups { gap: 0.85rem; }
+                .executive-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+                .executive-kpi-card--mobile-full { grid-column: span 1 / span 1; }
+                .executive-kpi-card--four, .executive-kpi-card--wide, .executive-kpi-card--triple, .executive-kpi-card--quad, .executive-kpi-card--full { grid-column: span 2 / span 2; }
+                .executive-violations-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             }
             @media (min-width: 1024px) {
+                .executive-top-groups { grid-template-columns: minmax(0, 2.3fr) minmax(0, 3.2fr) minmax(0, 4.5fr); }
                 .executive-kpi-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
-                .executive-kpi-card { grid-column: span 2 / span 2; }
-                .executive-kpi-card--wide { grid-column: span 4 / span 4; }
+                .executive-kpi-card, .executive-kpi-card--mobile-full { grid-column: span 2 / span 2; }
+                .executive-kpi-card--four { grid-column: span 4 / span 4; }
+                .executive-kpi-card--wide { grid-column: span 5 / span 5; }
+                .executive-kpi-card--triple { grid-column: span 6 / span 6; }
+                .executive-kpi-card--quad { grid-column: span 8 / span 8; }
+                .executive-kpi-card--full { grid-column: span 10 / span 10; }
+                .executive-violations-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
             }
         </style>
+        @php
+            $topGroupKeys = ['stopped_drivers_status', 'workshop_breakdowns_status', 'expired_regulatory_documents_status'];
+            $topGroupedCards = array_values(array_filter(
+                $executiveCards,
+                static fn (array $c): bool => in_array($c['key'] ?? '', $topGroupKeys, true),
+            ));
+            $remainingCards = array_values(array_filter(
+                $executiveCards,
+                static fn (array $c): bool => ! in_array($c['key'] ?? '', $topGroupKeys, true),
+            ));
+        @endphp
+
+        {{-- Compact Top Row: السائقين + الورش + الأوراق النظامية --}}
+        @if (count($topGroupedCards) > 0)
+            <section aria-label="ملخص السائقين والورش والأوراق النظامية">
+                <div class="executive-top-groups">
+                    @foreach ($topGroupedCards as $card)
+                        <div class="min-w-0 w-full group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+                            <a
+                                href="{{ route($card['route'], $card['route_params'] ?? []) }}"
+                                class="flex min-h-[46px] sm:min-h-[54px] items-center justify-center bg-slate-900 px-2.5 sm:px-3 py-2 sm:py-2.5 text-center text-sm sm:text-lg xl:text-xl font-black leading-snug tracking-tight text-white group-hover:bg-black transition-colors"
+                            >
+                                <span>{{ $card['title'] }}</span>
+                            </a>
+
+                            <table class="w-full flex-1 table-fixed border-collapse">
+                                <thead>
+                                    <tr class="border-b-2 border-black bg-slate-100/80">
+                                        @foreach ($card['cells'] as $cell)
+                                            <th scope="col" class="border-e-2 border-black last:border-e-0 px-1 sm:px-2 py-2 sm:py-2.5 text-center text-[11px] sm:text-sm xl:text-[15px] font-black leading-tight sm:leading-snug text-black break-words">
+                                                {{ $cell['label'] }}
+                                            </th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        @foreach ($card['cells'] as $cell)
+                                            <td class="border-e-2 border-black last:border-e-0 p-0 text-center bg-white">
+                                                <a
+                                                    href="{{ route($cell['route'] ?? $card['route'], $cell['params'] ?? []) }}"
+                                                    class="flex h-full min-h-[60px] sm:min-h-[78px] w-full items-center justify-center px-1 sm:px-2 py-2.5 sm:py-3 text-2xl sm:text-4xl xl:text-[42px] font-black tracking-tight tabular-nums {{ $colorClasses[$cell['color']] ?? 'text-black' }} hover:bg-slate-50/90 transition-colors"
+                                                >
+                                                    {{ $cell['value'] }}
+                                                </a>
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section aria-label="ملخص إجمالي الأعداد لجميع المحاور">
             <div class="executive-kpi-grid">
-                @foreach ($executiveCards as $card)
-                    <div class="{{ ! empty($card['wide']) ? 'executive-kpi-card--wide' : 'executive-kpi-card' }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+                @foreach ($remainingCards as $card)
+                    @php
+                        $cardSpanClass = match (true) {
+                            ! empty($card['full_width']) => 'executive-kpi-card--full',
+                            ! empty($card['quad']) => 'executive-kpi-card--quad',
+                            ! empty($card['triple']) => 'executive-kpi-card--triple',
+                            ! empty($card['four_cols']) => 'executive-kpi-card--four',
+                            ! empty($card['wide']) => 'executive-kpi-card--wide',
+                            ! empty($card['compact_two']) || count($card['cells'] ?? []) > 1 => 'executive-kpi-card--mobile-full',
+                            default => 'executive-kpi-card',
+                        };
+                    @endphp
+                    <div class="{{ $cardSpanClass }} group flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
                         {{-- Dark Navy Header Bar --}}
                         <a
                             href="{{ route($card['route'], $card['route_params'] ?? []) }}"
-                            class="flex min-h-[64px] items-center justify-center bg-slate-900 px-3 py-3 text-center text-base sm:text-lg xl:text-xl font-black leading-snug tracking-tight text-white group-hover:bg-black transition-colors"
+                            class="flex min-h-[48px] sm:min-h-[64px] items-center justify-center bg-slate-900 px-2 sm:px-3 py-2 sm:py-3 text-center text-xs sm:text-lg xl:text-xl font-black leading-snug tracking-tight text-white group-hover:bg-black transition-colors"
                         >
                             <span>{{ $card['title'] }}</span>
                         </a>
@@ -96,7 +176,7 @@
                             <thead>
                                 <tr class="border-b-2 border-black bg-slate-100/80">
                                     @foreach ($card['cells'] as $cell)
-                                        <th scope="col" class="border-e-2 border-black last:border-e-0 px-2.5 py-2.5 text-center text-sm sm:text-base font-black text-black">
+                                        <th scope="col" class="border-e-2 border-black last:border-e-0 {{ ! empty($card['compact_two']) ? 'px-1.5 sm:px-2 py-2 sm:py-2.5 text-[11px] sm:text-sm xl:text-[15px]' : 'px-2 sm:px-2.5 py-2 sm:py-2.5 text-xs sm:text-base' }} text-center font-black leading-tight sm:leading-snug text-black break-words">
                                             {{ $cell['label'] }}
                                         </th>
                                     @endforeach
@@ -105,20 +185,25 @@
                             <tbody>
                                 <tr>
                                     @foreach ($card['cells'] as $cell)
+                                        @php
+                                            $isCellEditable = ! empty($cell['editable']) || ! empty($card['editable']);
+                                            $cellMetricKey = $cell['metric_key'] ?? ($card['metric_key'] ?? null);
+                                            $cellRawValue = $cell['raw_value'] ?? ($card['raw_value'] ?? $cell['value']);
+                                        @endphp
                                         <td class="border-e-2 border-black last:border-e-0 p-0 text-center {{ ! empty($cell['tinted']) ? 'bg-sky-50/60' : 'bg-white' }}">
-                                            @if (! empty($card['editable']))
+                                            @if ($isCellEditable && $cellMetricKey)
                                                 <div
                                                     x-data="{
                                                         editing: false,
                                                         saving: false,
-                                                        rawValue: @js($card['raw_value'] ?? $cell['value']),
+                                                        rawValue: @js($cellRawValue),
                                                         displayValue: @js($cell['value']),
                                                         canEdit: @js((bool) auth()->user()?->canManageDeviations()),
                                                         async saveMetric() {
                                                             if (this.saving) return;
                                                             this.saving = true;
                                                             try {
-                                                                const response = await fetch(@js(route('dashboard.metrics.update', $card['metric_key'])), {
+                                                                const response = await fetch(@js(route('dashboard.metrics.update', $cellMetricKey, false)), {
                                                                     method: 'PATCH',
                                                                     headers: {
                                                                         'Content-Type': 'application/json',
@@ -141,14 +226,14 @@
                                                             }
                                                         }
                                                     }"
-                                                    class="relative flex h-full min-h-[96px] w-full items-center justify-center px-3 py-4"
+                                                    class="relative flex h-full min-h-[72px] sm:min-h-[96px] w-full items-center justify-center px-2 sm:px-3 py-3 sm:py-4"
                                                 >
                                                     <div x-show="!editing" class="flex items-center justify-center gap-2 w-full">
                                                         <button
                                                             type="button"
                                                             @click="if (canEdit) { editing = true; $nextTick(() => $refs.metricInput.focus()); }"
                                                             :class="canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'"
-                                                            class="text-4xl sm:text-5xl font-black tracking-tight tabular-nums {{ $colorClasses[$cell['color']] ?? 'text-black' }}"
+                                                            class="text-2xl sm:text-5xl font-black tracking-tight tabular-nums break-words {{ $colorClasses[$cell['color']] ?? 'text-black' }}"
                                                             title="اضغط لتعديل القيمة مباشرة"
                                                         >
                                                             <span x-text="displayValue">{{ $cell['value'] }}</span>
@@ -200,8 +285,8 @@
                                                 </div>
                                             @else
                                                 <a
-                                                    href="{{ route($card['route'], $cell['params'] ?? []) }}"
-                                                    class="flex h-full min-h-[96px] w-full items-center justify-center px-3 py-4 {{ ! empty($card['wide']) ? 'text-3xl sm:text-4xl xl:text-[42px]' : 'text-4xl sm:text-5xl' }} font-black tracking-tight tabular-nums {{ $colorClasses[$cell['color']] ?? 'text-black' }} hover:bg-slate-50/90 transition-colors"
+                                                    href="{{ route($cell['route'] ?? $card['route'], $cell['params'] ?? []) }}"
+                                                    class="flex h-full min-h-[72px] sm:min-h-[96px] w-full items-center justify-center {{ ! empty($card['compact_two']) ? 'px-1.5 sm:px-2 py-2.5 sm:py-3 text-2xl sm:text-4xl' : (! empty($card['wide']) ? 'px-2 sm:px-3 py-3 sm:py-4 text-2xl sm:text-4xl xl:text-[42px]' : 'px-2 sm:px-3 py-3 sm:py-4 text-3xl sm:text-5xl') }} font-black tracking-tight tabular-nums {{ $colorClasses[$cell['color']] ?? 'text-black' }} hover:bg-slate-50/90 transition-colors"
                                                 >
                                                     {{ $cell['value'] }}
                                                 </a>
@@ -215,6 +300,71 @@
                 @endforeach
             </div>
         </section>
+
+        {{-- Unified Per-Year Transport Violations Card (مخالفات وزارة النقل مجمّعة حسب السنة) --}}
+        @if (count($transportViolationYearCards) > 0)
+            <section aria-label="مخالفات وزارة النقل حسب السنة">
+                <div class="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-sm transition-all hover:shadow-lg">
+                    <a
+                        href="{{ route('transport-violations.index') }}"
+                        class="flex min-h-[52px] items-center justify-center bg-slate-900 px-4 py-2.5 text-center text-lg sm:text-xl font-black tracking-tight text-white hover:bg-black transition-colors"
+                    >
+                        <span>مخالفات وزارة النقل</span>
+                    </a>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[680px] table-fixed border-collapse text-center">
+                            <thead>
+                                <tr class="border-b-2 border-black bg-slate-200/80">
+                                    @foreach ($transportViolationYearCards as $yearCard)
+                                        <th
+                                            scope="colgroup"
+                                            colspan="2"
+                                            class="{{ ! $loop->last ? 'border-e-2 border-black' : '' }} {{ ! empty($yearCard['is_total']) ? 'bg-amber-200/80 text-slate-950' : '' }} px-2 py-2 text-center text-sm sm:text-base font-black text-slate-950"
+                                        >
+                                            <a
+                                                href="{{ route($yearCard['route'], $yearCard['route_params'] ?? []) }}"
+                                                class="hover:underline"
+                                            >
+                                                {{ ($yearCard['year'] ?? '') !== '' ? $yearCard['year'] : 'الإجمالي' }}
+                                            </a>
+                                        </th>
+                                    @endforeach
+                                </tr>
+                                <tr class="border-b-2 border-black bg-slate-100/80">
+                                    @foreach ($transportViolationYearCards as $yearCard)
+                                        @foreach ($yearCard['cells'] as $cell)
+                                            <th
+                                                scope="col"
+                                                class="{{ $loop->first ? 'border-e border-slate-400' : (! $loop->parent->last ? 'border-e-2 border-black' : '') }} {{ ! empty($yearCard['is_total']) ? 'bg-amber-100/70' : '' }} px-1.5 py-2 text-center text-[11px] sm:text-xs font-black leading-tight text-black"
+                                            >
+                                                {{ $cell['label'] }}
+                                            </th>
+                                        @endforeach
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    @foreach ($transportViolationYearCards as $yearCard)
+                                        @foreach ($yearCard['cells'] as $cell)
+                                            <td class="{{ $loop->first ? 'border-e border-slate-400 '.(! empty($yearCard['is_total']) ? 'bg-amber-50/60' : 'bg-white') : ((! $loop->parent->last ? 'border-e-2 border-black ' : '').(! empty($yearCard['is_total']) ? 'bg-amber-50/90' : 'bg-sky-50/50')) }} p-0 text-center">
+                                                <a
+                                                    href="{{ route($cell['route'] ?? $yearCard['route'], $cell['params'] ?? []) }}"
+                                                    class="flex h-full min-h-[76px] w-full items-center justify-center px-1.5 py-3 text-xl sm:text-2xl font-black tracking-tight tabular-nums {{ $colorClasses[$cell['color']] ?? 'text-black' }} hover:bg-slate-50/90 transition-colors"
+                                                >
+                                                    {{ $cell['value'] }}
+                                                </a>
+                                            </td>
+                                        @endforeach
+                                    @endforeach
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        @endif
 
         {{-- Executive Financial Support Summary Table (موقف الدعم المالي للمعدات 2026) --}}
         @if ($financialSupport && count($financialSupport['rows'] ?? []) > 0)

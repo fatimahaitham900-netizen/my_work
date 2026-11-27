@@ -82,42 +82,41 @@
         }"
         class="space-y-5"
     >
-        {{-- Sub-Pages Navigation Tabs (صفحات الأوراق النظامية) --}}
-        <section class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-sm sm:text-base font-extrabold text-slate-900">صفحات الأوراق النظامية</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">اختر الكشف لعرض الفحص الدوري المنتهي، كروت التشغيل المنتهية، أو الاستمارات المنتهية</p>
-                </div>
+        {{-- Sub-Pages Navigation Cards (صفحات الأوراق النظامية) --}}
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach ($documentTabs as $tab)
+                @php
+                    $isActiveTab = ! ($isSummaryView ?? false) && $tab['value'] === $activeDocumentType;
+                    $tabRouteParams = $tab['value'] !== '' ? ['document_type' => $tab['value']] : [];
+                @endphp
+                <a
+                    href="{{ route('regulatory-documents.index', $tabRouteParams) }}"
+                    class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-all {{ $isActiveTab ? 'border-slate-950 bg-slate-950 text-white shadow-lg ring-4 ring-slate-950/15' : 'border-slate-300 bg-white text-slate-900 shadow-xs hover:border-slate-900 hover:bg-slate-50 hover:shadow-md' }}"
+                >
+                    <div class="min-w-0">
+                        <p class="text-base sm:text-lg font-black leading-tight">{{ $tab['label'] }}</p>
+                        <p class="mt-1 text-xs font-bold {{ $isActiveTab ? 'text-slate-300' : 'text-slate-500' }}">كشف الأوراق النظامية للمعدات</p>
+                    </div>
+                    <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center {{ $isActiveTab ? 'bg-rose-500/25 text-rose-100' : 'bg-slate-100 text-slate-950' }}">
+                        <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ number_format((int) $tab['count']) }}</p>
+                        <p class="mt-1 text-[11px] font-extrabold {{ $isActiveTab ? 'text-rose-200' : 'text-slate-500' }}">سجل</p>
+                    </div>
+                </a>
+            @endforeach
 
-                <div class="flex flex-wrap items-center gap-2">
-                    @foreach ($documentTabs as $tab)
-                        @php
-                            $isActiveTab = ! ($isSummaryView ?? false) && $tab['value'] === $activeDocumentType;
-                            $tabRouteParams = $tab['value'] !== '' ? ['document_type' => $tab['value']] : [];
-                        @endphp
-                        <a
-                            href="{{ route('regulatory-documents.index', $tabRouteParams) }}"
-                            class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition {{ $isActiveTab ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white' }}"
-                        >
-                            <span>{{ $tab['label'] }}</span>
-                            <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums {{ $isActiveTab ? 'bg-rose-500/30 text-rose-100' : 'bg-slate-200/80 text-slate-700' }}">
-                                {{ $tab['count'] }}
-                            </span>
-                        </a>
-                    @endforeach
-
-                    <a
-                        href="{{ route('regulatory-documents.index', ['view' => 'summary']) }}"
-                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition {{ ($isSummaryView ?? false) ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm' : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-500 hover:bg-emerald-100' }}"
-                    >
-                        <span>ملخص حسب نوع المعدة</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums {{ ($isSummaryView ?? false) ? 'bg-white/20 text-white' : 'bg-emerald-200/80 text-emerald-900' }}">
-                            {{ count($equipmentSummary['rows'] ?? []) }}
-                        </span>
-                    </a>
+            <a
+                href="{{ route('regulatory-documents.index', ['view' => 'summary']) }}"
+                class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-all {{ ($isSummaryView ?? false) ? 'border-emerald-800 bg-emerald-700 text-white shadow-lg ring-4 ring-emerald-700/15' : 'border-emerald-300 bg-emerald-50/40 text-slate-900 shadow-xs hover:border-emerald-700 hover:bg-emerald-50 hover:shadow-md' }}"
+            >
+                <div class="min-w-0">
+                    <p class="text-base sm:text-lg font-black leading-tight">ملخص حسب نوع المعدة</p>
+                    <p class="mt-1 text-xs font-bold {{ ($isSummaryView ?? false) ? 'text-emerald-100' : 'text-emerald-900/75' }}">توزيع الأوراق المنتهية حسب نوع المعدة</p>
                 </div>
-            </div>
+                <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center {{ ($isSummaryView ?? false) ? 'bg-white/15 text-white' : 'bg-emerald-100 text-emerald-900' }}">
+                    <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ number_format(count($equipmentSummary['rows'] ?? [])) }}</p>
+                    <p class="mt-1 text-[11px] font-extrabold {{ ($isSummaryView ?? false) ? 'text-emerald-100' : 'text-emerald-800' }}">نوع</p>
+                </div>
+            </a>
         </section>
 
         @if ($isSummaryView ?? false)

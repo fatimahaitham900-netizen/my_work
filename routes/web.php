@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AccidentClaimController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BreakdownDriverStoppageController;
 use App\Http\Controllers\CarBreakdownController;
+use App\Http\Controllers\CarRegulatoryDocumentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\EquipmentBreakdownController;
+use App\Http\Controllers\EquipmentDistributionController;
 use App\Http\Controllers\FinancialSupportController;
 use App\Http\Controllers\IdleProjectEquipmentController;
 use App\Http\Controllers\MaintenanceDeviationController;
@@ -207,5 +211,57 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::get('/{registrationAmendment}', [RegistrationAmendmentController::class, 'show'])->name('show');
         Route::put('/{registrationAmendment}', [RegistrationAmendmentController::class, 'update'])->name('update');
         Route::delete('/{registrationAmendment}', [RegistrationAmendmentController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 14: الأوراق النظامية للسيارات
+    Route::prefix('car-regulatory-documents')->name('car-regulatory-documents.')->group(function (): void {
+        Route::get('/', [CarRegulatoryDocumentController::class, 'index'])->name('index');
+        Route::get('/export', [CarRegulatoryDocumentController::class, 'export'])->name('export');
+        Route::get('/import/template', [CarRegulatoryDocumentController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [CarRegulatoryDocumentController::class, 'directImport'])->name('import.direct');
+        Route::match(['post', 'delete'], '/purge-all', [CarRegulatoryDocumentController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [CarRegulatoryDocumentController::class, 'store'])->name('store');
+        Route::get('/{carRegulatoryDocument}', [CarRegulatoryDocumentController::class, 'show'])->name('show');
+        Route::put('/{carRegulatoryDocument}', [CarRegulatoryDocumentController::class, 'update'])->name('update');
+        Route::delete('/{carRegulatoryDocument}', [CarRegulatoryDocumentController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 15: توزيعة المعدات
+    Route::prefix('equipment-distributions')->name('equipment-distributions.')->group(function (): void {
+        Route::get('/', [EquipmentDistributionController::class, 'index'])->name('index');
+        Route::get('/export', [EquipmentDistributionController::class, 'export'])->name('export');
+        Route::get('/import/template', [EquipmentDistributionController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [EquipmentDistributionController::class, 'directImport'])->name('import.direct');
+        Route::match(['post', 'delete'], '/purge-all', [EquipmentDistributionController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [EquipmentDistributionController::class, 'store'])->name('store');
+        Route::get('/{equipmentDistribution}', [EquipmentDistributionController::class, 'show'])->name('show');
+        Route::put('/{equipmentDistribution}', [EquipmentDistributionController::class, 'update'])->name('update');
+        Route::delete('/{equipmentDistribution}', [EquipmentDistributionController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 16: السائقين
+    Route::prefix('drivers')->name('drivers.')->group(function (): void {
+        Route::get('/', [DriverController::class, 'index'])->name('index');
+        Route::get('/export', [DriverController::class, 'export'])->name('export');
+        Route::get('/import/template', [DriverController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [DriverController::class, 'directImport'])->name('import.direct');
+        Route::match(['post', 'delete'], '/purge-all', [DriverController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [DriverController::class, 'store'])->name('store');
+        Route::get('/{driver}', [DriverController::class, 'show'])->name('show');
+        Route::put('/{driver}', [DriverController::class, 'update'])->name('update');
+        Route::delete('/{driver}', [DriverController::class, 'destroy'])->name('destroy');
+    });
+
+    // Module 17: الحوادث ومطالبة التأمين
+    Route::prefix('accident-claims')->name('accident-claims.')->group(function (): void {
+        Route::get('/', [AccidentClaimController::class, 'index'])->name('index');
+        Route::get('/export', [AccidentClaimController::class, 'export'])->name('export');
+        Route::get('/import/template', [AccidentClaimController::class, 'downloadTemplate'])->name('import.template');
+        Route::post('/import', [AccidentClaimController::class, 'directImport'])->name('import.direct');
+        Route::match(['post', 'delete'], '/purge-all', [AccidentClaimController::class, 'purgeAll'])->name('purge-all');
+        Route::post('/', [AccidentClaimController::class, 'store'])->name('store');
+        Route::get('/{accidentClaim}', [AccidentClaimController::class, 'show'])->name('show');
+        Route::put('/{accidentClaim}', [AccidentClaimController::class, 'update'])->name('update');
+        Route::delete('/{accidentClaim}', [AccidentClaimController::class, 'destroy'])->name('destroy');
     });
 });

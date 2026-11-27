@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\OwnershipTransferStatus;
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Database\Factories\OwnershipTransferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -31,7 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class OwnershipTransfer extends Model
 {
     /** @use HasFactory<OwnershipTransferFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     /**
      * @return array<string, string>

@@ -50,38 +50,39 @@
     @endphp
 
     <div x-data="fleetModuleManager(@js($moduleConfig))" class="space-y-5">
-        {{-- Monthly Sub-Pages Navigation Tabs (صفحات الشهور) --}}
-        <section class="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-sm sm:text-base font-extrabold text-slate-900">كشوفات الدعم المالي حسب الشهر (2026)</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">اختر الشهر لعرض كشف التحويلات التفصيلي وملخص العهد والإصلاحات</p>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    @foreach ($monthTabs as $tab)
-                        @php $isActive = (string) $tab['month'] === (string) $activeMonth; @endphp
-                        <a
-                            href="{{ route('financial-support.index', ['month' => $tab['month']]) }}"
-                            class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition {{ $isActive ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400 hover:bg-white' }}"
-                        >
-                            <span>{{ $tab['title'] }} / {{ $tab['year'] }}</span>
-                            <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums {{ $isActive ? 'bg-emerald-500/25 text-emerald-200' : 'bg-slate-200/80 text-slate-700' }}">
-                                {{ $tab['transfers_count'] }}
-                            </span>
-                        </a>
-                    @endforeach
-
+        {{-- Monthly Sub-Pages Navigation Cards (صفحات الشهور) --}}
+        <section class="space-y-4">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ($monthTabs as $tab)
+                    @php $isActive = (string) $tab['month'] === (string) $activeMonth; @endphp
                     <a
-                        href="{{ route('financial-support.index', ['month' => 'all']) }}"
-                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-extrabold transition {{ $activeMonth === 'all' ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-400 hover:bg-white' }}"
+                        href="{{ route('financial-support.index', ['month' => $tab['month']]) }}"
+                        class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-all {{ $isActive ? 'border-slate-950 bg-slate-950 text-white shadow-lg ring-4 ring-slate-950/15' : 'border-slate-300 bg-white text-slate-900 shadow-xs hover:border-slate-900 hover:bg-slate-50 hover:shadow-md' }}"
                     >
-                        <span>جميع الشهور</span>
-                        <span class="rounded-md px-1.5 py-0.5 text-[11px] tabular-nums {{ $activeMonth === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700' }}">
-                            {{ array_sum(array_column($monthTabs, 'transfers_count')) }}
-                        </span>
+                        <div class="min-w-0">
+                            <p class="text-base sm:text-lg font-black leading-tight">{{ $tab['title'] }} / {{ $tab['year'] }}</p>
+                            <p class="mt-1 text-xs font-bold {{ $isActive ? 'text-slate-300' : 'text-slate-500' }}">كشف الدعم المالي للشهر</p>
+                        </div>
+                        <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center {{ $isActive ? 'bg-emerald-500/25 text-emerald-100' : 'bg-slate-100 text-slate-950' }}">
+                            <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ number_format((int) $tab['transfers_count']) }}</p>
+                            <p class="mt-1 text-[11px] font-extrabold {{ $isActive ? 'text-emerald-200' : 'text-slate-500' }}">تحويل</p>
+                        </div>
                     </a>
-                </div>
+                @endforeach
+
+                <a
+                    href="{{ route('financial-support.index', ['month' => 'all']) }}"
+                    class="group flex items-center justify-between gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-all {{ $activeMonth === 'all' ? 'border-emerald-800 bg-emerald-700 text-white shadow-lg ring-4 ring-emerald-700/15' : 'border-emerald-300 bg-emerald-50/40 text-slate-900 shadow-xs hover:border-emerald-700 hover:bg-emerald-50 hover:shadow-md' }}"
+                >
+                    <div class="min-w-0">
+                        <p class="text-base sm:text-lg font-black leading-tight">جميع الشهور</p>
+                        <p class="mt-1 text-xs font-bold {{ $activeMonth === 'all' ? 'text-emerald-100' : 'text-emerald-900/75' }}">كشف شامل لجميع التحويلات</p>
+                    </div>
+                    <div class="shrink-0 rounded-2xl px-3.5 py-2 text-center {{ $activeMonth === 'all' ? 'bg-white/15 text-white' : 'bg-emerald-100 text-emerald-900' }}">
+                        <p class="text-2xl sm:text-3xl font-black tabular-nums leading-none">{{ number_format(array_sum(array_column($monthTabs, 'transfers_count'))) }}</p>
+                        <p class="mt-1 text-[11px] font-extrabold {{ $activeMonth === 'all' ? 'text-emerald-100' : 'text-emerald-800' }}">تحويل</p>
+                    </div>
+                </a>
             </div>
 
             {{-- Active Month Executive Summary Strip (Matches Dashboard Table) --}}

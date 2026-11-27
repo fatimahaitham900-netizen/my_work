@@ -9,8 +9,10 @@ use App\Enums\BreakdownSeverity;
 use App\Enums\ComplianceStatus;
 use App\Enums\OwnershipTransferStatus;
 use App\Enums\UnassignedDriverStatus;
+use App\Models\AccidentClaim;
 use App\Models\BreakdownDriverStoppage;
 use App\Models\CarBreakdown;
+use App\Models\CarRegulatoryDocument;
 use App\Models\DashboardMetric;
 use App\Models\EquipmentBreakdown;
 use App\Models\FinancialSupportTransfer;
@@ -26,7 +28,7 @@ use Illuminate\Support\Facades\Cache;
 
 class DashboardService
 {
-    public const string CACHE_KEY = 'executive_dashboard.summary.v18';
+    public const string CACHE_KEY = 'executive_dashboard.summary.v23';
 
     public const int CACHE_TTL_SECONDS = 300;
 
@@ -75,7 +77,7 @@ class DashboardService
             ];
         }
 
-        foreach (['transport_violations', 'spare_part_transfers', 'car_breakdowns', 'idle_project_equipment', 'financial_support', 'maintenance_deviations', 'rental_equipment', 'registration_amendments'] as $extraKey) {
+        foreach (['transport_violations', 'spare_part_transfers', 'car_breakdowns', 'idle_project_equipment', 'financial_support', 'maintenance_deviations', 'rental_equipment', 'registration_amendments', 'car_regulatory_documents'] as $extraKey) {
             if (isset($summary['navigation_extras'][$extraKey])) {
                 $moduleCounts[$extraKey] = $summary['navigation_extras'][$extraKey];
             }
@@ -159,12 +161,24 @@ class DashboardService
         $expiredPeriodicInspections = RegulatoryDocument::query()->expiredPeriodicInspections()->count();
         $expiredOperatingCards = RegulatoryDocument::query()->expiredOperatingCards()->count();
         $expiredRegistrations = RegulatoryDocument::query()->expiredRegistrations()->count();
+        $expiredInsurances = RegulatoryDocument::query()->expiredInsurances()->count();
         $regulatoryRenewalCost = (float) RegulatoryDocument::query()->deviations()->sum('renewal_cost');
 
         // 6. Transport Violations
         $violationsTotal = TransportViolation::query()->count();
         $violationsAmount = (float) TransportViolation::query()->sum('amount');
         $violationsPending = TransportViolation::query()->pendingObjection()->count();
+        $violationsByYear = TransportViolation::query()
+            ->get(['violation_date', 'amount'])
+            ->groupBy(static fn (TransportViolation $v): string => $v->violation_date?->format('Y') ?? 'غير محدد')
+            ->sortKeys()
+            ->map(static fn ($group, string $year): array => [
+                'year' => $year,
+                'count' => $group->count(),
+                'amount' => (float) $group->sum('amount'),
+            ])
+            ->values()
+            ->all();
 
         // 7. Spare Part Transfers
         $sparePartTransfersTotal = SparePartTransfer::query()->count();
@@ -195,6 +209,16 @@ class DashboardService
         $carsExpiredInspectionDisplay = is_numeric($carsExpiredInspectionRaw)
             ? number_format((float) $carsExpiredInspectionRaw)
             : $carsExpiredInspectionRaw;
+
+        $carsExpiredRegistrationsRaw = DashboardMetric::getValue(DashboardMetric::KEY_CARS_EXPIRED_REGISTRATIONS, '0');
+        $carsExpiredRegistrationsDisplay = is_numeric($carsExpiredRegistrationsRaw)
+            ? number_format((float) $carsExpiredRegistrationsRaw)
+            : $carsExpiredRegistrationsRaw;
+
+        $carsExpiredInsurancesRaw = DashboardMetric::getValue(DashboardMetric::KEY_CARS_EXPIRED_INSURANCES, '0');
+        $carsExpiredInsurancesDisplay = is_numeric($carsExpiredInsurancesRaw)
+            ? number_format((float) $carsExpiredInsurancesRaw)
+            : $carsExpiredInsurancesRaw;
 
         $highOilConsumptionRaw = DashboardMetric::getValue(DashboardMetric::KEY_HIGH_OIL_CONSUMPTION, '0');
         $highOilConsumptionDisplay = is_numeric($highOilConsumptionRaw)
@@ -236,9 +260,47 @@ class DashboardService
 
         // 13. Rental Equipment
         $rentalEquipmentTotal = RentalEquipment::query()->count();
+        $rentalEquipmentAmount = (float) RentalEquipment::query()->sum('rental_amount');
 
         // 14. Registration Amendments
         $registrationAmendmentsTotal = RegistrationAmendment::query()->count();
+
+        // 15. Car Regulatory Documents
+        $carRegCounts = CarRegulatoryDocument::query()
+            ->selectRaw('document_type, COUNT(*) as total_rows')
+            ->groupBy('document_type')
+            ->pluck('total_rows', 'document_type');
+        $carRegExpiredInspections = (int) ($carRegCounts->get(CarRegulatoryDocument::TYPE_INSPECTION) ?? 0);
+        $carRegExpiredRegistrations = (int) ($carRegCounts->get(CarRegulatoryDocument::TYPE_REGISTRATION) ?? 0);
+        $carRegExpiredInsurances = (int) ($carRegCounts->get(CarRegulatoryDocument::TYPE_INSURANCE) ?? 0);
+        $carRegTotal = (int) $carRegCounts->sum();
+
+        // 16. Accidents & Insurance Claims
+        $unclosedAccidentsCount = AccidentClaim::query()
+            ->where('record_type', AccidentClaim::TYPE_ACCIDENT)
+            ->where(function ($query): void {
+                $query->whereNull('claim_status')
+                    ->orWhere(function ($sub): void {
+                        $sub->where('claim_status', 'not like', '%مغلق%')
+                            ->where('claim_status', 'not like', '%تم الإغلاق%')
+                            ->where('claim_status', 'not like', '%تم الاغلاق%');
+                    });
+            })
+            ->count();
+
+        $unrecoveredInsuranceAmount = (float) AccidentClaim::query()
+            ->where('record_type', AccidentClaim::TYPE_INSURANCE_CLAIM)
+            ->where(function ($query): void {
+                $query->whereNull('claim_status')
+                    ->orWhere(function ($sub): void {
+                        $sub->where('claim_status', 'not like', '%مغلق%')
+                            ->where('claim_status', 'not like', '%تم التعويض%')
+                            ->where('claim_status', 'not like', '%تم الإغلاق%')
+                            ->where('claim_status', 'not like', '%تم الاغلاق%');
+                    });
+            })
+            ->get(['estimated_cost', 'compensation_amount'])
+            ->sum(static fn (AccidentClaim $claim): float => max(0.0, (float) $claim->estimated_cost - (float) $claim->compensation_amount));
 
         $totalActiveDeviations = $transfersActive
             + $stoppagesActive
@@ -330,137 +392,171 @@ class DashboardService
 
         $executiveCards = [
             [
-                'key' => 'breakdown_driver_stoppages',
-                'title' => 'سائقين متوقفين على أعطال المعدات',
+                'key' => 'stopped_drivers_status',
+                'title' => 'موقف السائقين المتوقفين',
                 'route' => 'breakdown-stoppages.index',
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($stoppagesTotal), 'color' => 'text-purple-700', 'tinted' => false, 'params' => []],
-                ],
-            ],
-            [
-                'key' => 'unassigned_drivers',
-                'title' => 'سائقين بدون معدات',
-                'route' => 'unassigned-drivers.index',
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($unassignedTotal), 'color' => 'text-amber-600', 'tinted' => false, 'params' => []],
-                ],
-            ],
-            [
-                'key' => 'equipment_breakdowns',
-                'title' => 'معدات متعطلة بالورش',
-                'route' => 'equipment-breakdowns.index',
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($breakdownsTotal), 'color' => 'text-rose-600', 'tinted' => false, 'params' => []],
-                ],
-            ],
-            [
-                'key' => 'car_breakdowns',
-                'title' => 'السيارات المتعطلة بالورش',
-                'route' => 'car-breakdowns.index',
-                'route_params' => ['vehicle_category' => CarBreakdown::CATEGORY_CAR],
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($carBreakdownsCarsTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => ['vehicle_category' => CarBreakdown::CATEGORY_CAR]],
-                ],
-            ],
-            [
-                'key' => 'bus_breakdowns',
-                'title' => 'إجمالي الباصات المتعطلة',
-                'route' => 'car-breakdowns.index',
-                'route_params' => ['vehicle_category' => CarBreakdown::CATEGORY_BUS],
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($carBreakdownsBusesTotal), 'color' => 'text-purple-700', 'tinted' => false, 'params' => ['vehicle_category' => CarBreakdown::CATEGORY_BUS]],
-                ],
-            ],
-            [
-                'key' => 'expired_periodic_inspections',
-                'title' => 'معدات منتهية الفحص الدوري',
-                'route' => 'regulatory-documents.index',
-                'route_params' => [
-                    'document_type' => 'فحص دوري',
-                    'compliance_status' => ComplianceStatus::Expired->value,
-                ],
-                'span' => 'lg:col-span-3',
+                'span' => 'sm:col-span-2 lg:col-span-4',
+                'wide' => true,
                 'cells' => [
                     [
-                        'label' => 'إجمالي العدد',
+                        'label' => 'إجمالي السائقين المتوقفين على أعطال المعدات',
+                        'value' => number_format($stoppagesTotal),
+                        'color' => 'text-purple-700',
+                        'tinted' => false,
+                        'route' => 'breakdown-stoppages.index',
+                        'params' => [],
+                    ],
+                    [
+                        'label' => 'إجمالي السائقين المتوقفين بدون معدات',
+                        'value' => number_format($unassignedTotal),
+                        'color' => 'text-amber-600',
+                        'tinted' => false,
+                        'route' => 'unassigned-drivers.index',
+                        'params' => [],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'workshop_breakdowns_status',
+                'title' => 'موقف الأعطال بالورش',
+                'route' => 'equipment-breakdowns.index',
+                'span' => 'sm:col-span-2 lg:col-span-6',
+                'triple' => true,
+                'wide' => true,
+                'cells' => [
+                    [
+                        'label' => 'إجمالي المعدات المتعطلة',
+                        'value' => number_format($breakdownsTotal),
+                        'color' => 'text-rose-600',
+                        'tinted' => false,
+                        'route' => 'equipment-breakdowns.index',
+                        'params' => [],
+                    ],
+                    [
+                        'label' => 'إجمالي السيارات المتعطلة',
+                        'value' => number_format($carBreakdownsCarsTotal),
+                        'color' => 'text-blue-600',
+                        'tinted' => false,
+                        'route' => 'car-breakdowns.index',
+                        'params' => ['vehicle_category' => CarBreakdown::CATEGORY_CAR],
+                    ],
+                    [
+                        'label' => 'إجمالي الباصات المتعطلة',
+                        'value' => number_format($carBreakdownsBusesTotal),
+                        'color' => 'text-purple-700',
+                        'tinted' => false,
+                        'route' => 'car-breakdowns.index',
+                        'params' => ['vehicle_category' => CarBreakdown::CATEGORY_BUS],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'expired_regulatory_documents_status',
+                'title' => 'موقف الأوراق النظامية للمعدات',
+                'route' => 'regulatory-documents.index',
+                'span' => 'sm:col-span-2 lg:col-span-8',
+                'quad' => true,
+                'wide' => true,
+                'cells' => [
+                    [
+                        'label' => 'فحص دوري منتهي',
                         'value' => number_format($expiredPeriodicInspections),
                         'color' => 'text-rose-600',
                         'tinted' => false,
+                        'route' => 'regulatory-documents.index',
                         'params' => [
                             'document_type' => 'فحص دوري',
                             'compliance_status' => ComplianceStatus::Expired->value,
                         ],
                     ],
-                ],
-            ],
-            [
-                'key' => 'expired_operating_cards',
-                'title' => 'كروت تشغيل منتهية معدات',
-                'route' => 'regulatory-documents.index',
-                'route_params' => [
-                    'document_type' => 'كرت تشغيل',
-                    'compliance_status' => ComplianceStatus::Expired->value,
-                ],
-                'span' => 'lg:col-span-3',
-                'cells' => [
                     [
-                        'label' => 'إجمالي العدد',
-                        'value' => number_format($expiredOperatingCards),
-                        'color' => 'text-amber-600',
-                        'tinted' => false,
-                        'params' => [
-                            'document_type' => 'كرت تشغيل',
-                            'compliance_status' => ComplianceStatus::Expired->value,
-                        ],
-                    ],
-                ],
-            ],
-            [
-                'key' => 'expired_registrations',
-                'title' => 'استمارات منتهية معدات',
-                'route' => 'regulatory-documents.index',
-                'route_params' => [
-                    'document_type' => 'استمارة',
-                    'compliance_status' => ComplianceStatus::Expired->value,
-                ],
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    [
-                        'label' => 'إجمالي العدد',
+                        'label' => 'استمارات منتهية',
                         'value' => number_format($expiredRegistrations),
                         'color' => 'text-purple-700',
                         'tinted' => false,
+                        'route' => 'regulatory-documents.index',
                         'params' => [
                             'document_type' => 'استمارة',
                             'compliance_status' => ComplianceStatus::Expired->value,
                         ],
                     ],
+                    [
+                        'label' => 'كروت تشغيل منتهية',
+                        'value' => number_format($expiredOperatingCards),
+                        'color' => 'text-amber-600',
+                        'tinted' => false,
+                        'route' => 'regulatory-documents.index',
+                        'params' => [
+                            'document_type' => 'كرت تشغيل',
+                            'compliance_status' => ComplianceStatus::Expired->value,
+                        ],
+                    ],
+                    [
+                        'label' => 'تأمين منتهي',
+                        'value' => number_format($expiredInsurances),
+                        'color' => 'text-blue-600',
+                        'tinted' => false,
+                        'route' => 'regulatory-documents.index',
+                        'params' => [
+                            'document_type' => 'تأمين',
+                            'compliance_status' => ComplianceStatus::Expired->value,
+                        ],
+                    ],
                 ],
             ],
             [
-                'key' => 'cars_expired_periodic_inspection',
-                'title' => 'سيارات منتهي فحصها الدوري',
-                'route' => 'car-breakdowns.index',
+                'key' => 'cars_regulatory_documents_status',
+                'title' => 'موقف الأوراق النظامية للسيارات',
+                'route' => 'car-regulatory-documents.index',
                 'span' => 'lg:col-span-3',
-                'editable' => true,
-                'metric_key' => DashboardMetric::KEY_CARS_EXPIRED_INSPECTION,
-                'raw_value' => $carsExpiredInspectionRaw,
+                'compact_two' => true,
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => $carsExpiredInspectionDisplay, 'color' => 'text-rose-600', 'tinted' => false, 'params' => []],
+                    [
+                        'label' => 'فحص دوري منتهي',
+                        'value' => number_format($carRegExpiredInspections),
+                        'color' => 'text-rose-600',
+                        'tinted' => false,
+                        'route' => 'car-regulatory-documents.index',
+                        'params' => ['document_type' => CarRegulatoryDocument::TYPE_INSPECTION],
+                    ],
+                    [
+                        'label' => 'استمارات منتهية',
+                        'value' => number_format($carRegExpiredRegistrations),
+                        'color' => 'text-purple-700',
+                        'tinted' => false,
+                        'route' => 'car-regulatory-documents.index',
+                        'params' => ['document_type' => CarRegulatoryDocument::TYPE_REGISTRATION],
+                    ],
+                    [
+                        'label' => 'تأمين منتهي',
+                        'value' => number_format($carRegExpiredInsurances),
+                        'color' => 'text-blue-600',
+                        'tinted' => false,
+                        'route' => 'car-regulatory-documents.index',
+                        'params' => ['document_type' => CarRegulatoryDocument::TYPE_INSURANCE],
+                    ],
                 ],
             ],
             [
-                'key' => 'spare_part_transfers',
-                'title' => 'نقل قطع غيار بدون تعميد الإدارة',
-                'route' => 'spare-part-transfers.index',
+                'key' => 'total_project_rental_equipment',
+                'title' => 'إجمالي معدات الإيجار بالمشاريع',
+                'route' => 'rental-equipment.index',
                 'span' => 'lg:col-span-3',
+                'compact_two' => true,
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($sparePartTransfersTotal), 'color' => 'text-slate-950', 'tinted' => false, 'params' => []],
+                    ['label' => 'إجمالي معدات الإيجار', 'value' => number_format($rentalEquipmentTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'إجمالي مبالغ الإيجار', 'value' => number_format($rentalEquipmentAmount, 0), 'color' => 'text-emerald-600', 'tinted' => true, 'params' => []],
+                ],
+            ],
+            [
+                'key' => 'maintenance_deviations',
+                'title' => 'انحراف الصيانات',
+                'route' => 'maintenance-deviations.index',
+                'span' => 'lg:col-span-3',
+                'compact_two' => true,
+                'cells' => [
+                    ['label' => 'الصيانة العادية', 'value' => $maintenanceSummary['daily_deviation_rate'].'%', 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'الصيانة الوقائية', 'value' => $maintenanceSummary['preventive_deviation_rate'].'%', 'color' => 'text-rose-600', 'tinted' => true, 'params' => []],
                 ],
             ],
             [
@@ -491,6 +587,40 @@ class DashboardService
                 ],
             ],
             [
+                'key' => 'accidents_and_insurance_status',
+                'title' => 'موقف الحوادث والتأمينات',
+                'route' => 'accident-claims.index',
+                'span' => 'lg:col-span-3',
+                'compact_two' => true,
+                'cells' => [
+                    [
+                        'label' => 'حوادث لم تغلق',
+                        'value' => number_format($unclosedAccidentsCount),
+                        'color' => 'text-rose-600',
+                        'tinted' => false,
+                        'route' => 'accident-claims.index',
+                        'params' => ['record_type' => AccidentClaim::TYPE_ACCIDENT],
+                    ],
+                    [
+                        'label' => 'مبالغ من التأمين غير مستردة',
+                        'value' => number_format($unrecoveredInsuranceAmount, 0),
+                        'color' => 'text-amber-600',
+                        'tinted' => true,
+                        'route' => 'accident-claims.index',
+                        'params' => ['record_type' => AccidentClaim::TYPE_INSURANCE_CLAIM],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'spare_part_transfers',
+                'title' => 'نقل قطع غيار بدون تعميد الإدارة',
+                'route' => 'spare-part-transfers.index',
+                'span' => 'lg:col-span-3',
+                'cells' => [
+                    ['label' => 'إجمالي العدد', 'value' => number_format($sparePartTransfersTotal), 'color' => 'text-slate-950', 'tinted' => false, 'params' => []],
+                ],
+            ],
+            [
                 'key' => 'diesel_consumption_control',
                 'title' => 'معدلات استهلاك الديزل والرقابة على الصرف',
                 'route' => 'dashboard',
@@ -512,15 +642,6 @@ class DashboardService
                 'raw_value' => $highOilConsumptionRaw,
                 'cells' => [
                     ['label' => 'إجمالي العدد', 'value' => $highOilConsumptionDisplay, 'color' => 'text-amber-600', 'tinted' => false, 'params' => []],
-                ],
-            ],
-            [
-                'key' => 'total_project_rental_equipment',
-                'title' => 'إجمالي معدات الإيجار بالمشاريع',
-                'route' => 'rental-equipment.index',
-                'span' => 'lg:col-span-3',
-                'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($rentalEquipmentTotal), 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
                 ],
             ],
             [
@@ -583,29 +704,74 @@ class DashboardService
                     ['label' => 'إجمالي العدد', 'value' => $dieselFundingProjectsDisplay, 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
                 ],
             ],
-            [
+        ];
+
+        $transportViolationYearCards = [];
+        if (count($violationsByYear) > 0) {
+            foreach ($violationsByYear as $yearRow) {
+                $yearLabel = (string) $yearRow['year'];
+                $transportViolationYearCards[] = [
+                    'key' => 'transport_violations_'.$yearLabel,
+                    'year' => $yearLabel,
+                    'title' => 'مخالفات وزارة النقل '.$yearLabel,
+                    'route' => 'transport-violations.index',
+                    'route_params' => ['year' => $yearLabel],
+                    'cells' => [
+                        [
+                            'label' => 'إجمالي المخالفات',
+                            'value' => number_format((int) $yearRow['count']),
+                            'color' => 'text-rose-600',
+                            'tinted' => false,
+                            'params' => ['year' => $yearLabel],
+                        ],
+                        [
+                            'label' => 'قيمة المخالفات (ر.س)',
+                            'value' => number_format((float) $yearRow['amount'], 0),
+                            'color' => 'text-emerald-600',
+                            'tinted' => true,
+                            'params' => ['year' => $yearLabel],
+                        ],
+                    ],
+                ];
+            }
+
+            $transportViolationYearCards[] = [
+                'key' => 'transport_violations_total',
+                'year' => 'الإجمالي',
+                'is_total' => true,
+                'title' => 'إجمالي مخالفات وزارة النقل',
+                'route' => 'transport-violations.index',
+                'route_params' => [],
+                'cells' => [
+                    [
+                        'label' => 'إجمالي المخالفات',
+                        'value' => number_format($violationsTotal),
+                        'color' => 'text-rose-600',
+                        'tinted' => false,
+                        'params' => [],
+                    ],
+                    [
+                        'label' => 'إجمالي القيمة (ر.س)',
+                        'value' => number_format($violationsAmount, 0),
+                        'color' => 'text-emerald-600',
+                        'tinted' => true,
+                        'params' => [],
+                    ],
+                ],
+            ];
+        } else {
+            $transportViolationYearCards[] = [
                 'key' => 'transport_violations',
+                'year' => '',
                 'title' => 'مخالفات وزارة النقل',
                 'route' => 'transport-violations.index',
-                'span' => 'sm:col-span-2 lg:col-span-6',
-                'wide' => true,
+                'route_params' => [],
                 'cells' => [
-                    ['label' => 'إجمالي العدد', 'value' => number_format($violationsTotal), 'color' => 'text-rose-600', 'tinted' => false, 'params' => []],
-                    ['label' => 'إجمالي المبالغ (ر.س)', 'value' => number_format($violationsAmount, 0), 'color' => 'text-emerald-600', 'tinted' => true, 'params' => []],
+                    ['label' => 'إجمالي المخالفات', 'value' => '0', 'color' => 'text-rose-600', 'tinted' => false, 'params' => []],
+                    ['label' => 'قيمة المخالفات (ر.س)', 'value' => '0', 'color' => 'text-emerald-600', 'tinted' => true, 'params' => []],
                 ],
-            ],
-            [
-                'key' => 'maintenance_deviations',
-                'title' => 'انحراف الصيانات',
-                'route' => 'maintenance-deviations.index',
-                'span' => 'sm:col-span-2 lg:col-span-6',
-                'wide' => true,
-                'cells' => [
-                    ['label' => 'نسبة انحراف الصيانة العادية', 'value' => $maintenanceSummary['daily_deviation_rate'].'%', 'color' => 'text-blue-600', 'tinted' => false, 'params' => []],
-                    ['label' => 'نسبة انحراف الصيانة الوقائية', 'value' => $maintenanceSummary['preventive_deviation_rate'].'%', 'color' => 'text-rose-600', 'tinted' => true, 'params' => []],
-                ],
-            ],
-        ];
+            ];
+        }
 
         return [
             'generated_at' => now()->format('Y-m-d H:i'),
@@ -618,6 +784,7 @@ class DashboardService
             ],
             'modules' => $modules,
             'executive_cards' => $executiveCards,
+            'transport_violation_year_cards' => $transportViolationYearCards,
             'financial_support_summary' => $financialSupportSummary,
             'charts' => [
                 'by_module' => [
@@ -688,6 +855,13 @@ class DashboardService
                     'critical' => 0,
                     'title' => 'معدات تعديل استمارة',
                     'route' => 'registration-amendments.index',
+                    'route_params' => [],
+                ],
+                'car_regulatory_documents' => [
+                    'active' => $carRegTotal,
+                    'critical' => $carRegTotal,
+                    'title' => 'الأوراق النظامية للسيارات',
+                    'route' => 'car-regulatory-documents.index',
                     'route_params' => [],
                 ],
             ],

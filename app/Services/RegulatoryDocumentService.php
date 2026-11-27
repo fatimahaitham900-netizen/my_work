@@ -146,6 +146,11 @@ class RegulatoryDocumentService
                 'count' => (int) ($countsByType->get('استمارة') ?? 0),
             ],
             [
+                'value' => 'تأمين',
+                'label' => 'التأمين المنتهي',
+                'count' => (int) ($countsByType->get('تأمين') ?? 0),
+            ],
+            [
                 'value' => '',
                 'label' => 'جميع الأوراق النظامية',
                 'count' => $totalAll,

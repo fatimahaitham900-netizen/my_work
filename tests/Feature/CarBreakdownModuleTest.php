@@ -170,6 +170,7 @@ it('classifies cars vs buses and displays separate dashboard cards for cars and 
     $this->actingAs($admin)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('السيارات المتعطلة بالورش')
+        ->assertSee('موقف الأعطال بالورش')
+        ->assertSee('إجمالي السيارات المتعطلة')
         ->assertSee('إجمالي الباصات المتعطلة');
 });

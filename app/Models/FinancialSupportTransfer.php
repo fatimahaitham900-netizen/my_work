@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasExtraColumns;
 use App\Traits\Auditable;
 use Database\Factories\FinancialSupportTransferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class FinancialSupportTransfer extends Model
 {
     /** @use HasFactory<FinancialSupportTransferFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
 
     /**
      * @return array<string, string>

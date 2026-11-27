@@ -49,6 +49,16 @@ class TransportViolationService
             }
         }
 
+        $year = trim((string) ($filters['year'] ?? ''));
+        if ($year !== '') {
+            if ($year === 'غير محدد') {
+                $query->whereNull('violation_date');
+            } elseif (preg_match('/^\d{4}$/', $year) === 1) {
+                $query->whereDate('violation_date', '>=', "{$year}-01-01")
+                    ->whereDate('violation_date', '<=', "{$year}-12-31");
+            }
+        }
+
         $dateFrom = (string) ($filters['date_from'] ?? '');
         if ($dateFrom !== '') {
             $query->whereDate('violation_date', '>=', $dateFrom);
@@ -116,7 +126,17 @@ class TransportViolationService
             ->pluck($column)
             ->all();
 
+        $years = TransportViolation::query()
+            ->whereNotNull('violation_date')
+            ->get(['violation_date'])
+            ->map(static fn (TransportViolation $v): string => $v->violation_date->format('Y'))
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+
         return [
+            'years' => $years,
             'record_holders' => $distinct('record_holder'),
             'departments' => $distinct('department'),
             'cities' => $distinct('city'),

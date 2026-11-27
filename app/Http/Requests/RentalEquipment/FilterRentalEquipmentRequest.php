@@ -20,6 +20,7 @@ class FilterRentalEquipmentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'view' => ['nullable', 'string', 'in:table,analysis'],
             'search' => ['nullable', 'string', 'max:120'],
             'contractor_name' => ['nullable', 'string', 'max:150'],
             'equipment_type' => ['nullable', 'string', 'max:120'],

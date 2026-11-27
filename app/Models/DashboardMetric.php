@@ -24,6 +24,10 @@ class DashboardMetric extends Model
 
     public const string KEY_CARS_EXPIRED_INSPECTION = 'cars_expired_periodic_inspection';
 
+    public const string KEY_CARS_EXPIRED_REGISTRATIONS = 'cars_expired_registrations';
+
+    public const string KEY_CARS_EXPIRED_INSURANCES = 'cars_expired_insurances';
+
     public const string KEY_HIGH_OIL_CONSUMPTION = 'high_oil_consumption_equipment';
 
     public const string KEY_TOTAL_RENTAL_EQUIPMENT = 'total_project_rental_equipment';

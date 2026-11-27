@@ -43,7 +43,9 @@ class DashboardController extends Controller
         $allowedKeys = [
             DashboardMetric::KEY_REGISTRATION_AMENDMENT => 'معدات تحتاج إلى تعديل استمارة',
             DashboardMetric::KEY_DIESEL_CONTROL => 'معدلات استهلاك الديزل والرقابة على الصرف',
-            DashboardMetric::KEY_CARS_EXPIRED_INSPECTION => 'سيارات منتهي فحصها الدوري',
+            DashboardMetric::KEY_CARS_EXPIRED_INSPECTION => 'فحص دوري منتهي (السيارات)',
+            DashboardMetric::KEY_CARS_EXPIRED_REGISTRATIONS => 'استمارات منتهية (السيارات)',
+            DashboardMetric::KEY_CARS_EXPIRED_INSURANCES => 'تأمين منتهي (السيارات)',
             DashboardMetric::KEY_HIGH_OIL_CONSUMPTION => 'تزويد زيوت للمعدات الذي صرفها عالي',
             DashboardMetric::KEY_TOTAL_RENTAL_EQUIPMENT => 'إجمالي معدات الإيجار بالمشاريع',
             DashboardMetric::KEY_EQUIPMENT_INVESTIGATIONS => 'تحقيقات إدارة المعدات',

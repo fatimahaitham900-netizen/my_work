@@ -29,8 +29,11 @@ it('auto-calculates stoppage days, imports/purges csv, and syncs live count to d
         ->assertOk()
         ->assertSee('معدات تعديل استمارة')
         ->assertSee('DT_000033')
-        ->assertSee('10 يوم')
-        ->assertSee('3 يوم');
+        ->assertSee($tenDaysAgo)
+        ->assertSee($threeDaysAgo);
+
+    expect(RegistrationAmendment::query()->where('equipment_code', 'DT_000033')->firstOrFail()->stoppage_days)->toBe(10)
+        ->and(RegistrationAmendment::query()->where('equipment_code', 'TR_000011')->firstOrFail()->stoppage_days)->toBe(3);
 
     // Dashboard card "معدات تحتاج إلى تعديل استمارة" is linked and shows live count (2)
     $this->actingAs($admin)
@@ -82,4 +85,3 @@ it('enforces rbac permissions on registration amendments endpoints', function ()
         ->deleteJson(route('registration-amendments.destroy', $record))
         ->assertForbidden();
 });
-

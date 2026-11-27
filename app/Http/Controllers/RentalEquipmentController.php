@@ -38,16 +38,23 @@ class RentalEquipmentController extends Controller
     public function index(FilterRentalEquipmentRequest $request): View|JsonResponse
     {
         $filters = $request->filters();
+        $activeView = ($filters['view'] ?? 'table') === 'analysis' ? 'analysis' : 'table';
         $records = $this->service->paginate($filters);
         $filteredAmountTotal = $this->service->filteredAmountTotal($filters);
         $kpis = $this->service->kpis();
+        $analysis = $this->service->replacementAnalysis($filters);
 
         if ($request->header('X-Partial') === 'true' || $request->expectsJson()) {
+            $partialView = $activeView === 'analysis'
+                ? 'modules.rental-equipment._analysis'
+                : 'modules.rental-equipment._table';
+
             return response()->json([
                 'kpis' => $kpis,
-                'table_html' => view('modules.rental-equipment._table', [
+                'table_html' => view($partialView, [
                     'records' => $records,
                     'filteredAmountTotal' => $filteredAmountTotal,
+                    'analysis' => $analysis,
                 ])->render(),
                 'export_url' => route('rental-equipment.export', array_filter($filters, static fn (mixed $v): bool => $v !== null && $v !== '')),
                 'total' => $records->total(),
@@ -59,6 +66,8 @@ class RentalEquipmentController extends Controller
             'filteredAmountTotal' => $filteredAmountTotal,
             'kpis' => $kpis,
             'filters' => $filters,
+            'activeView' => $activeView,
+            'analysis' => $analysis,
             'options' => $this->service->filterOptions(),
         ]);
     }

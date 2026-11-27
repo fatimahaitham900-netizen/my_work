@@ -1,3 +1,16 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table
+        :records="$records"
+        :headers="$exactHeaders"
+        footer-total-label="الإجمالي العام للنتائج ({{ $records->total() }} مخالفة)"
+        footer-total-value="{{ number_format((float) $filteredAmountTotal, 0) }} ر.س"
+    />
+@else
 <div class="overflow-x-auto max-h-[74vh]">
     <table class="min-w-full border-collapse text-[13px]">
         <thead class="sticky top-0 z-10 bg-slate-900 text-xs font-extrabold text-white shadow-xs">
@@ -18,6 +31,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">حالة الموظف</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">التحميل</th>
                 <th scope="col" class="min-w-44 border-b-2 border-slate-700 px-3.5 py-3.5 text-center">موقف التصريح</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -155,10 +169,11 @@
                             <span class="font-bold text-slate-400">—</span>
                         @endif
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$violation" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="16" class="px-6 py-12 text-center">
+                    <td colspan="{{ 16 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد مخالفات وزارة نقل مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو إضافة مخالفة جديدة.</p>
                     </td>
@@ -174,7 +189,7 @@
                     <td class="whitespace-nowrap border-e border-rose-500/70 bg-rose-600/90 px-4 py-3.5 text-center text-sm font-extrabold text-white tabular-nums">
                         {{ number_format((float) $filteredAmountTotal, 0) }} ر.س
                     </td>
-                    <td colspan="11" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
+                    <td colspan="{{ 11 + count($extraHeaders) }}" class="px-4 py-3.5 text-start text-xs font-semibold text-slate-300">
                         يتم احتساب إجمالي المبالغ تلقائياً وفق الفلاتر النشطة حالياً
                     </td>
                 </tr>
@@ -184,4 +199,5 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
 

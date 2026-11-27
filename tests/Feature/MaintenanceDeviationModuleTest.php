@@ -30,8 +30,8 @@ it('renders maintenance deviations page and dashboard box with regular and preve
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('انحراف الصيانات')
-        ->assertSee('نسبة انحراف الصيانة العادية')
-        ->assertSee('نسبة انحراف الصيانة الوقائية')
+        ->assertSee('الصيانة العادية')
+        ->assertSee('الصيانة الوقائية')
         ->assertSee('1%')
         ->assertSee('32%');
 

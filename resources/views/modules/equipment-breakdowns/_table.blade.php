@@ -1,3 +1,11 @@
+@php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
+@endphp
+
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto max-h-[74vh]">
     <table class="min-w-full border-collapse text-[13px]">
         <thead class="sticky top-0 z-10 bg-slate-900 text-xs font-extrabold text-white shadow-xs">
@@ -15,6 +23,7 @@
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3.5 py-3.5 text-center">المبلغ</th>
                 <th scope="col" class="whitespace-nowrap border-b-2 border-e border-slate-700 px-3 py-3.5 text-center">تاريخ الإصلاح</th>
                 <th scope="col" class="min-w-64 border-b-2 border-slate-700 px-3.5 py-3.5 text-start">ملاحظات الموقف</th>
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -123,10 +132,11 @@
                     <td class="min-w-64 max-w-md px-3.5 py-3 text-start text-xs font-bold leading-relaxed text-slate-800">
                         {{ $breakdown->notes ?: '—' }}
                     </td>
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$breakdown" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="13" class="px-6 py-12 text-center">
+                    <td colspan="{{ 13 + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-sm font-bold text-slate-800">لا توجد أعطال معدات مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs text-slate-500">جرب تغيير الفلاتر أو تسجيل عطل جديد.</p>
                     </td>
@@ -137,3 +147,4 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif

@@ -9,6 +9,7 @@ use App\Enums\BreakdownSeverity;
 use App\Enums\DriverStoppageStatus;
 use App\Enums\RepairStatus;
 use App\Models\EquipmentBreakdown;
+use App\Support\ExtraColumns;
 use App\Support\SimpleZipReader;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -74,6 +75,24 @@ class EquipmentBreakdownDailyImportService
             $headerMap = $this->buildHeaderMap($rawRows[0]);
         }
 
+        $headerRow = $rawRows[$headerRowIndex] ?? [];
+        $exactHeaderMap = [];
+        $usedExactLabels = [];
+        foreach ($headerRow as $colIdx => $rawHeader) {
+            $label = trim(preg_replace('/\s+/u', ' ', (string) $rawHeader) ?? '');
+            if ($label === '') {
+                continue;
+            }
+            $uniqueLabel = $label;
+            $suffix = 2;
+            while (isset($usedExactLabels[$uniqueLabel])) {
+                $uniqueLabel = "{$label} ({$suffix})";
+                $suffix++;
+            }
+            $usedExactLabels[$uniqueLabel] = true;
+            $exactHeaderMap[$colIdx] = $uniqueLabel;
+        }
+
         $dataRows = array_slice($rawRows, $headerRowIndex + 1);
 
         $normalizedRows = [];
@@ -83,6 +102,25 @@ class EquipmentBreakdownDailyImportService
             $row = $this->mapRowToAttributes($headerMap, $rowValues, $index);
             if ($row === null || trim((string) ($row['equipment_code'] ?? '')) === '') {
                 continue;
+            }
+
+            if (! empty($exactHeaderMap)) {
+                $exactCols = [];
+                foreach ($exactHeaderMap as $colIdx => $exactLabel) {
+                    $val = isset($rowValues[$colIdx]) ? trim((string) $rowValues[$colIdx]) : '';
+                    if ($val === '' || $val === '—' || $val === '-') {
+                        $exactCols[$exactLabel] = '';
+                    } elseif (($headerMap[$colIdx] ?? null) === 'breakdown_date' && is_numeric($val)) {
+                        $exactCols[$exactLabel] = $this->parseDate($val) ?? $val;
+                    } else {
+                        $exactCols[$exactLabel] = $val;
+                    }
+                }
+                $row['extra_columns'] = [
+                    ExtraColumns::EXACT_KEY => $exactCols,
+                ];
+            } else {
+                $row['extra_columns'] = null;
             }
 
             $normalizedRows[] = $row;
@@ -170,6 +208,7 @@ class EquipmentBreakdownDailyImportService
                     'expected_repair_date' => $row['expected_repair_date'] ?: null,
                     'notes' => $row['notes'] !== '' ? $row['notes'] : null,
                     'category' => $existing?->category?->value ?? BreakdownCategory::Mechanical->value,
+                    'extra_columns' => ! empty($row['extra_columns']) ? $row['extra_columns'] : null,
                 ],
             ];
         }

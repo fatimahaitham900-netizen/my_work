@@ -1,21 +1,28 @@
 @php
+    $exactHeaders = \App\Support\ExtraColumns::exactHeaders($records);
+    $extraHeaders = \App\Support\ExtraColumns::headers($records);
     $activeDoc = $activeDocumentType ?? '';
     $hijriHeader = match ($activeDoc) {
         'فحص دوري' => 'تاريخ الفحص (هـ)',
         'كرت تشغيل' => 'تاريخ كارت التشغيل (هـ)',
         'استمارة' => 'تاريخ الاستمارة (هـ)',
+        'تأمين' => 'تاريخ التأمين (هـ)',
         default => 'التاريخ الهجري (هـ)',
     };
     $daysHeader = match ($activeDoc) {
         'فحص دوري' => 'الأيام المتبقية للفحص',
         'كرت تشغيل' => 'الأيام المتبقية للكرت',
         'استمارة' => 'الأيام المتبقية للاستمارة',
+        'تأمين' => 'الأيام المتبقية للتأمين',
         default => 'الأيام المتبقية',
     };
     $showRenewalStatusColumn = $activeDoc !== 'فحص دوري';
     $totalColumns = $showRenewalStatusColumn ? 11 : 10;
 @endphp
 
+@if ($exactHeaders !== [])
+    <x-module.exact-table :records="$records" :headers="$exactHeaders" />
+@else
 <div class="overflow-x-auto max-h-[76vh]">
     <table class="min-w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10 bg-slate-950 text-[13px] font-black text-white shadow-sm">
@@ -33,6 +40,7 @@
                 @if ($showRenewalStatusColumn)
                     <th scope="col" class="whitespace-nowrap border-b-2 border-slate-700 px-3.5 py-4 text-center">الموقف من التجديد</th>
                 @endif
+                <x-module.extra-headers :headers="$extraHeaders" />
             </tr>
         </thead>
         <tbody class="bg-white">
@@ -131,10 +139,11 @@
                             @endif
                         </td>
                     @endif
+                    <x-module.extra-cells :headers="$extraHeaders" :record="$document" />
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $totalColumns }}" class="px-6 py-12 text-center">
+                    <td colspan="{{ $totalColumns + count($extraHeaders) }}" class="px-6 py-12 text-center">
                         <p class="text-base font-black text-slate-900">لا توجد سجلات مطابقة لمعايير البحث</p>
                         <p class="mt-1 text-xs font-bold text-slate-500">جرب تغيير الفلاتر أو إضافة سجل جديد.</p>
                     </td>
@@ -145,3 +154,4 @@
 </div>
 
 <x-module.pagination :paginator="$records" />
+@endif
