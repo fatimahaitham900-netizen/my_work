@@ -138,7 +138,7 @@ it('validates, creates, soft-deletes, and exports filtered equipment breakdowns 
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('EQ-NEW-808')
+    expect(extractExportText($csv))->toContain('EQ-NEW-808')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', EquipmentBreakdown::class)->count())->toBe(1);
 
     $this->actingAs($admin)

@@ -139,7 +139,7 @@
             ],
             [
                 'key' => 'drivers',
-                'label' => 'السائقين',
+                'label' => 'السائقين والورش',
                 'route' => 'drivers.index',
                 'active' => request()->routeIs('drivers.*'),
                 'icon' => 'drivers',

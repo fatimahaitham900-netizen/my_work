@@ -85,7 +85,7 @@ it('creates with optional/blank fields, updates, logs audit events, exports csv,
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('مولد 35 مكة')
+    expect(extractExportText($csv))->toContain('مولد 35 مكة')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', SparePartTransfer::class)->count())->toBe(1);
 
     $this->actingAs($admin)

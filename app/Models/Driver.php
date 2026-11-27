@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
+    'staff_category',
     'equipment_code',
     'branch',
     'site_location',
@@ -22,12 +23,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'nationality',
     'salary',
     'sponsor',
+    'status',
     'notes',
 ])]
 class Driver extends Model
 {
     /** @use HasFactory<DriverFactory> */
     use Auditable, HasExtraColumns, HasFactory, SoftDeletes;
+
+    public const CATEGORY_DRIVER = 'driver';
+
+    public const CATEGORY_WORKSHOP_STAFF = 'workshop_staff';
 
     /**
      * @return array<string, string>

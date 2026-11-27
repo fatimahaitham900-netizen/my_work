@@ -83,10 +83,10 @@ it('imports equipment distributions, renders exact columns, builds summary by ty
     expect(EquipmentDistribution::query()->count())->toBe(5);
 
     // 5. Export CSV
-    $exported = $this->actingAs($admin)
+    $exported = extractExportText($this->actingAs($admin)
         ->get(route('equipment-distributions.export'))
         ->assertOk()
-        ->streamedContent();
+        ->streamedContent());
 
     expect($exported)->toContain('حفارات')
         ->and($exported)->toContain('شيولات');

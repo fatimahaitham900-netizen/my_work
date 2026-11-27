@@ -172,7 +172,7 @@ it('creates with optional fields, updates transfer and month summary, logs audit
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('WL-999')
+    expect(extractExportText($csv))->toContain('WL-999')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', FinancialSupportTransfer::class)->count())->toBe(1);
 
     $this->actingAs($admin)

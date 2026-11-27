@@ -99,7 +99,7 @@ it('creates with optional/blank fields, updates, logs audit events, exports csv,
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('RD_000099')
+    expect(extractExportText($csv))->toContain('RD_000099')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', IdleProjectEquipment::class)->count())->toBe(1);
 
     $this->actingAs($admin)

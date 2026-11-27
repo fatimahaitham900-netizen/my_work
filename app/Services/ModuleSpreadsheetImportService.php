@@ -98,6 +98,8 @@ class ModuleSpreadsheetImportService
                 $deleteQuery->where('document_type', (string) $context['document_type']);
             } elseif ($module === 'accident-claims' && ! empty($context['record_type'])) {
                 $deleteQuery->where('record_type', (string) $context['record_type']);
+            } elseif ($module === 'drivers' && ! empty($context['staff_category'])) {
+                $deleteQuery->where('staff_category', (string) $context['staff_category']);
             } elseif ($module === 'financial-support' && ! empty($context['support_month'])) {
                 $deleteQuery->where('support_month', (int) $context['support_month']);
                 if (! empty($context['support_year'])) {
@@ -142,6 +144,8 @@ class ModuleSpreadsheetImportService
                 $query->where('document_type', (string) $context['document_type']);
             } elseif ($module === 'accident-claims' && ! empty($context['record_type'])) {
                 $query->where('record_type', (string) $context['record_type']);
+            } elseif ($module === 'drivers' && ! empty($context['staff_category'])) {
+                $query->where('staff_category', (string) $context['staff_category']);
             } elseif ($module === 'financial-support' && ! empty($context['support_month'])) {
                 $query->where('support_month', (int) $context['support_month']);
                 if (! empty($context['support_year'])) {
@@ -470,8 +474,9 @@ class ModuleSpreadsheetImportService
                     'employee_id' => ['الرقم الوظيفي', 'رقم وظيفي', 'employee_id'],
                     'job_title' => ['المهنة', 'المهنه', 'الوظيفة', 'الوظيفه', 'job_title'],
                     'nationality' => ['الجنسية', 'الجنسيه', 'nationality'],
-                    'salary' => ['الراتب', 'المرتب', 'الأجر', 'salary'],
+                    'salary' => ['الراتب', 'الراتب الإجمالي', 'الراتب الاجمالي', 'إجمالي الراتب', 'المرتب', 'الأجر', 'salary'],
                     'sponsor' => ['الكفيل', 'الكفالة', 'الكفاله', 'sponsor'],
+                    'status' => ['الحالة', 'الحاله', 'حالة الموظف', 'status'],
                     'notes' => ['ملاحظات', 'ملاحظة', 'ملاحظه', 'notes'],
                 ],
                 'decimals' => ['salary'],
@@ -742,7 +747,13 @@ class ModuleSpreadsheetImportService
 
             $attributes['rental_amount'] = $attributes['rental_amount'] ?? 0;
         } elseif ($module === 'drivers') {
+            $attributes['staff_category'] = ! empty($context['staff_category'])
+                ? (string) $context['staff_category']
+                : Driver::CATEGORY_DRIVER;
             $attributes['salary'] = $attributes['salary'] ?? 0;
+            if ($attributes['staff_category'] === Driver::CATEGORY_WORKSHOP_STAFF && empty($attributes['status'])) {
+                $attributes['status'] = 'نشط';
+            }
         } elseif ($module === 'accident-claims') {
             $attributes['record_type'] = ! empty($context['record_type'])
                 ? (string) $context['record_type']

@@ -112,13 +112,16 @@ it('imports drivers, auto-links branch and site from equipment distributions, re
         ->assertOk()
         ->assertJsonPath('total', 1);
 
-    // Export CSV includes linked branch & site
-    $exported = $this->actingAs($admin)
+    // Export Excel (.xlsx) includes linked branch & site
+    $exportedBinary = $this->actingAs($admin)
         ->get(route('drivers.export'))
         ->assertOk()
         ->streamedContent();
 
-    expect($exported)->toContain('رانجيت كومار')
+    $exported = extractExportText($exportedBinary);
+
+    expect(str_starts_with($exportedBinary, 'PK'))->toBeTrue()
+        ->and($exported)->toContain('رانجيت كومار')
         ->and($exported)->toContain('تشغيل -نجران');
 
     // Purge all
@@ -149,4 +152,61 @@ it('enforces rbac permissions on drivers endpoints', function (): void {
     $this->actingAs($supervisor)
         ->deleteJson(route('drivers.destroy', $driver))
         ->assertForbidden();
+});
+
+it('manages workshop staff (كادر الورش) separately from drivers with scoped import, purge, and styled xlsx export', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    // Seed one regular driver to ensure scoped operations never touch it
+    Driver::factory()->create([
+        'staff_category' => Driver::CATEGORY_DRIVER,
+        'driver_name' => 'سائق رئيسي',
+    ]);
+
+    $workshopCsv = "\xEF\xBB\xBF"
+        ."م,الاسم,الرقم الوظيفي,الجنسية,المهنه,الراتب الإجمالي,الفرع,الحالة\n"
+        ."1,شير باز خان زوتا خان,2521,Pakistan,كهربائي معدات,3358,ورشة المدينة الدار,نشط\n"
+        ."2,تولسي رام سوامي رام,4524,India,ميكانيكي ديزل,2974,ورشة المدينة الدار,نشط\n"
+        ."3,غلام مصطفى محمد لطيف,2232,Pakistan,بنشري,1900,ورشة الجنادرية الرياض,نشط\n";
+
+    $this->actingAs($admin)
+        ->post(route('drivers.import.direct'), [
+            'file' => UploadedFile::fake()->createWithContent('workshop-staff.csv', $workshopCsv),
+            'staff_category' => Driver::CATEGORY_WORKSHOP_STAFF,
+        ])
+        ->assertRedirect(route('drivers.index', ['view' => 'workshop_staff']));
+
+    expect(Driver::query()->where('staff_category', Driver::CATEGORY_WORKSHOP_STAFF)->count())->toBe(3)
+        ->and(Driver::query()->where('staff_category', Driver::CATEGORY_DRIVER)->count())->toBe(1);
+
+    // View كادر الورش renders exact workshop staff table and excludes regular drivers
+    $this->actingAs($admin)
+        ->get(route('drivers.index', ['view' => 'workshop_staff']))
+        ->assertOk()
+        ->assertSee('السائقين والورش')
+        ->assertSee('كادر الورش')
+        ->assertSee('شير باز خان زوتا خان')
+        ->assertSee('ورشة المدينة الدار')
+        ->assertSee('كهربائي معدات')
+        ->assertDontSee('سائق رئيسي');
+
+    // Export styled Excel (.xlsx) for كادر الورش
+    $xlsxBinary = $this->actingAs($admin)
+        ->get(route('drivers.export', ['view' => 'workshop_staff']))
+        ->assertOk()
+        ->streamedContent();
+
+    $xlsxText = extractExportText($xlsxBinary);
+    expect(str_starts_with($xlsxBinary, 'PK'))->toBeTrue()
+        ->and($xlsxText)->toContain('شير باز خان زوتا خان')
+        ->and($xlsxText)->toContain('ورشة الجنادرية الرياض')
+        ->and($xlsxText)->not->toContain('سائق رئيسي');
+
+    // Scoped purge of كادر الورش does NOT delete regular drivers
+    $this->actingAs($admin)
+        ->post(route('drivers.purge-all'), ['staff_category' => Driver::CATEGORY_WORKSHOP_STAFF])
+        ->assertRedirect(route('drivers.index', ['view' => 'workshop_staff']));
+
+    expect(Driver::query()->where('staff_category', Driver::CATEGORY_WORKSHOP_STAFF)->count())->toBe(0)
+        ->and(Driver::query()->where('staff_category', Driver::CATEGORY_DRIVER)->count())->toBe(1);
 });

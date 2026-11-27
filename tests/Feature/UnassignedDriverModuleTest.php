@@ -116,7 +116,7 @@ it('supports quick status toggle, crud workflows, audit logs, rbac, and csv expo
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('DRV-8810')
+    expect(extractExportText($csv))->toContain('DRV-8810')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', UnassignedDriver::class)->count())->toBe(1);
 
     // Soft-delete

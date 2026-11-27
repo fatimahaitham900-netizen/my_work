@@ -129,7 +129,7 @@ it('creates with optional/blank fields, updates, logs audit events, exports csv,
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('1000008887776')
+    expect(extractExportText($csv))->toContain('1000008887776')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', TransportViolation::class)->count())->toBe(1);
 
     // Soft delete

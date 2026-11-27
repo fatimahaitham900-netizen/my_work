@@ -21,13 +21,14 @@ class FilterDriversRequest extends BaseModuleFilterRequest
     {
         return [
             ...$this->baseFilterRules(),
-            'view' => ['nullable', 'string', 'in:table,summary,equipment_type_summary'],
+            'view' => ['nullable', 'string', 'in:table,summary,equipment_type_summary,workshop_staff'],
             'equipment_type' => ['nullable', 'string', 'max:150'],
             'branch' => ['nullable', 'string', 'max:120'],
             'site_location' => ['nullable', 'string', 'max:200'],
             'job_title' => ['nullable', 'string', 'max:150'],
             'nationality' => ['nullable', 'string', 'max:100'],
             'sponsor' => ['nullable', 'string', 'max:150'],
+            'status' => ['nullable', 'string', 'max:60'],
         ];
     }
 }

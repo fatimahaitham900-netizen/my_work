@@ -109,7 +109,7 @@ it('creates with optional breakdown link, validates invalid inputs, updates, sof
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('EMP-7741')
+    expect(extractExportText($csv))->toContain('EMP-7741')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', BreakdownDriverStoppage::class)->count())->toBe(1);
 
     // Viewer cannot delete; Admin can soft-delete

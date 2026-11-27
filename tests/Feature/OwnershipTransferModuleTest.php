@@ -133,12 +133,13 @@ it('updates, soft-deletes, enforces rbac, returns audit details, and exports fil
         ->get(route('ownership-transfers.export', ['search' => 'EQ-EXP-1']));
 
     $exportResponse->assertOk()
-        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-    $csvContent = $exportResponse->streamedContent();
-    expect(str_starts_with($csvContent, "\xEF\xBB\xBF"))->toBeTrue()
-        ->and($csvContent)->toContain('EQ-EXP-1')
-        ->and($csvContent)->not->toContain('EQ-EXP-2');
+    $xlsxBinary = $exportResponse->streamedContent();
+    $xlsxText = extractExportText($xlsxBinary);
+    expect(str_starts_with($xlsxBinary, 'PK'))->toBeTrue()
+        ->and($xlsxText)->toContain('EQ-EXP-1')
+        ->and($xlsxText)->not->toContain('EQ-EXP-2');
 
     expect(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', OwnershipTransfer::class)->count())->toBe(1);
 

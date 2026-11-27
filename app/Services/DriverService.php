@@ -153,7 +153,7 @@ class DriverService
 
         $updated = 0;
 
-        foreach (Driver::query()->whereNotNull('equipment_code')->where('equipment_code', '!=', '')->cursor() as $driver) {
+        foreach (Driver::query()->where('staff_category', Driver::CATEGORY_DRIVER)->whereNotNull('equipment_code')->where('equipment_code', '!=', '')->cursor() as $driver) {
             $key = self::normalizeEquipmentCode($driver->equipment_code);
             if ($key === '' || ! isset($distMap[$key])) {
                 continue;
@@ -257,7 +257,11 @@ class DriverService
      */
     public function filteredQuery(array $filters): Builder
     {
-        $query = Driver::query();
+        $category = ($filters['view'] ?? '') === 'workshop_staff' || ($filters['staff_category'] ?? '') === Driver::CATEGORY_WORKSHOP_STAFF
+            ? Driver::CATEGORY_WORKSHOP_STAFF
+            : Driver::CATEGORY_DRIVER;
+
+        $query = Driver::query()->where('staff_category', $category);
 
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
@@ -269,11 +273,12 @@ class DriverService
                     ->orWhere('employee_id', 'like', "%{$search}%")
                     ->orWhere('job_title', 'like', "%{$search}%")
                     ->orWhere('nationality', 'like', "%{$search}%")
-                    ->orWhere('sponsor', 'like', "%{$search}%");
+                    ->orWhere('sponsor', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
             });
         }
 
-        foreach (['branch', 'site_location', 'job_title', 'sponsor'] as $column) {
+        foreach (['branch', 'site_location', 'job_title', 'sponsor', 'status'] as $column) {
             $value = trim((string) ($filters[$column] ?? ''));
             if ($value !== '') {
                 $query->where($column, $value);
@@ -350,25 +355,49 @@ class DriverService
     }
 
     /**
-     * @return array{total: int, total_salary: string, jobs_count: int, nationalities_count: int}
+     * @return array{
+     *     total: int,
+     *     total_salary: string,
+     *     jobs_count: int,
+     *     nationalities_count: int,
+     *     workshop_staff_total: int,
+     *     workshop_staff_salary: string,
+     *     workshop_staff_active: int,
+     *     workshop_branches_count: int
+     * }
      */
     public function kpis(): array
     {
+        $driversBase = Driver::query()->where('staff_category', Driver::CATEGORY_DRIVER);
+        $workshopBase = Driver::query()->where('staff_category', Driver::CATEGORY_WORKSHOP_STAFF);
+
         return [
-            'total' => Driver::query()->count(),
-            'total_salary' => number_format((float) Driver::query()->sum('salary'), 0),
-            'jobs_count' => Driver::query()
+            'total' => (clone $driversBase)->count(),
+            'total_salary' => number_format((float) (clone $driversBase)->sum('salary'), 0),
+            'jobs_count' => (clone $driversBase)
                 ->whereNotNull('job_title')
                 ->where('job_title', '!=', '')
                 ->distinct('job_title')
                 ->count('job_title'),
-            'nationalities_count' => Driver::query()
+            'nationalities_count' => (clone $driversBase)
                 ->whereNotNull('nationality')
                 ->where('nationality', '!=', '')
                 ->pluck('nationality')
                 ->map(static fn (string $n): string => self::normalizeNationality($n))
                 ->unique()
                 ->count(),
+            'workshop_staff_total' => (clone $workshopBase)->count(),
+            'workshop_staff_salary' => number_format((float) (clone $workshopBase)->sum('salary'), 0),
+            'workshop_staff_active' => (clone $workshopBase)
+                ->where(function (Builder $q): void {
+                    $q->whereNull('status')->orWhere('status', 'like', '%نشط%');
+                })
+                ->count(),
+            'workshop_branches_count' => (clone $workshopBase)
+                ->whereNotNull('branch')
+                ->where('branch', '!=', '')
+                ->distinct('branch')
+                ->count('branch'),
         ];
     }
 
@@ -378,12 +407,14 @@ class DriverService
      *     site_locations: list<string>,
      *     job_titles: list<string>,
      *     nationalities: list<string>,
-     *     sponsors: list<string>
+     *     sponsors: list<string>,
+     *     statuses: list<string>
      * }
      */
-    public function filterOptions(): array
+    public function filterOptions(string $category = Driver::CATEGORY_DRIVER): array
     {
         $distinct = static fn (string $column): array => Driver::query()
+            ->where('staff_category', $category)
             ->whereNotNull($column)
             ->where($column, '!=', '')
             ->distinct()
@@ -392,6 +423,7 @@ class DriverService
             ->all();
 
         $nationalities = Driver::query()
+            ->where('staff_category', $category)
             ->whereNotNull('nationality')
             ->where('nationality', '!=', '')
             ->pluck('nationality')
@@ -407,6 +439,7 @@ class DriverService
             'job_titles' => $distinct('job_title'),
             'nationalities' => $nationalities,
             'sponsors' => $distinct('sponsor'),
+            'statuses' => $distinct('status'),
         ];
     }
 
@@ -589,6 +622,7 @@ class DriverService
     {
         return [
             'id' => $record->id,
+            'staff_category' => $record->staff_category ?? Driver::CATEGORY_DRIVER,
             'equipment_code' => $record->equipment_code ?? '',
             'branch' => $record->branch ?? '',
             'site_location' => $record->site_location ?? '',
@@ -598,6 +632,7 @@ class DriverService
             'nationality' => $record->nationality ?? '',
             'salary' => (string) ((float) $record->salary),
             'sponsor' => $record->sponsor ?? '',
+            'status' => $record->status ?? '',
             'notes' => $record->notes ?? '',
             'audit_logs' => $includeAudit ? $this->auditLogPresenter->forModel($record) : [],
         ];
@@ -608,6 +643,45 @@ class DriverService
      */
     public function exportCsv(array $filters): StreamedResponse
     {
+        $isWorkshopStaff = ($filters['view'] ?? '') === 'workshop_staff'
+            || ($filters['staff_category'] ?? '') === Driver::CATEGORY_WORKSHOP_STAFF;
+
+        if ($isWorkshopStaff) {
+            $headers = [
+                'م',
+                'الاسم',
+                'الرقم الوظيفي',
+                'الجنسية',
+                'المهنة',
+                'الراتب الإجمالي',
+                'الفرع',
+                'الحالة',
+            ];
+
+            $rows = [];
+            $index = 1;
+            foreach ($this->filteredQuery($filters)->cursor() as $record) {
+                $rows[] = [
+                    $index++,
+                    $record->driver_name ?? '',
+                    $record->employee_id ?? '',
+                    $record->nationality ?? '',
+                    $record->job_title ?? '',
+                    (float) $record->salary,
+                    $record->branch ?? '',
+                    $record->status ?: 'نشط',
+                ];
+            }
+
+            return $this->csvExportService->stream(
+                'workshop-staff-'.now()->format('Y-m-d').'.xlsx',
+                Driver::class,
+                $headers,
+                $rows,
+                $filters,
+            );
+        }
+
         $headers = [
             'كود المعدة',
             'الفرع',
@@ -638,10 +712,11 @@ class DriverService
         }
 
         return $this->csvExportService->stream(
-            'drivers-'.now()->format('Y-m-d').'.csv',
+            'drivers-'.now()->format('Y-m-d').'.xlsx',
             Driver::class,
             $headers,
             $rows,
+            $filters,
         );
     }
 }

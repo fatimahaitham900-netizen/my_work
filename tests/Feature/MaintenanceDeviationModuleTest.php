@@ -81,7 +81,7 @@ it('creates, updates, exports csv, logs audits, and soft-deletes maintenance dev
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('مسؤول الصيانة مجاز')
+    expect(extractExportText($csv))->toContain('مسؤول الصيانة مجاز')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', MaintenanceDeviation::class)->count())->toBe(1);
 
     $this->actingAs($viewer)->deleteJson(route('maintenance-deviations.destroy', $record))->assertForbidden();

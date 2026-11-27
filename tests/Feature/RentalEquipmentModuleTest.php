@@ -75,10 +75,10 @@ it('lists, filters, creates, imports, purges rental equipment and syncs live cou
         ->assertJsonPath('total', 1);
 
     // 6. Export CSV
-    $exported = $this->actingAs($admin)
+    $exported = extractExportText($this->actingAs($admin)
         ->get(route('rental-equipment.export'))
         ->assertOk()
-        ->streamedContent();
+        ->streamedContent());
 
     expect($exported)->toContain('شركة ابن الجزيرة المحدودة')
         ->and($exported)->toContain('مؤسسة الخليج');

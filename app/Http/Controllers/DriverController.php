@@ -31,17 +31,23 @@ class DriverController extends Controller
         $activeView = match ($filters['view'] ?? 'table') {
             'summary' => 'summary',
             'equipment_type_summary' => 'equipment_type_summary',
+            'workshop_staff' => 'workshop_staff',
             default => 'table',
         };
+        $staffCategory = $activeView === 'workshop_staff'
+            ? Driver::CATEGORY_WORKSHOP_STAFF
+            : Driver::CATEGORY_DRIVER;
+
         $records = $this->service->paginate($filters);
         $filteredSalaryTotal = $this->service->filteredSalaryTotal($filters);
         $kpis = $this->service->kpis();
-        $summary = $this->service->summary($filters);
+        $summary = $this->service->summary($activeView === 'workshop_staff' ? [] : $filters);
 
         if ($request->header('X-Partial') === 'true' || $request->expectsJson()) {
             $partialView = match ($activeView) {
                 'summary' => 'modules.drivers._summary',
                 'equipment_type_summary' => 'modules.drivers._equipment_type_summary',
+                'workshop_staff' => 'modules.drivers._workshop_staff_table',
                 default => 'modules.drivers._table',
             };
 
@@ -64,7 +70,7 @@ class DriverController extends Controller
             'filters' => $filters,
             'activeView' => $activeView,
             'summary' => $summary,
-            'options' => $this->service->filterOptions(),
+            'options' => $this->service->filterOptions($staffCategory),
         ]);
     }
 
@@ -83,12 +89,15 @@ class DriverController extends Controller
     public function store(StoreDriverRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $data['staff_category'] = $data['staff_category'] ?? Driver::CATEGORY_DRIVER;
         $data['salary'] = $data['salary'] ?? 0;
 
         $record = $this->service->create($data);
 
         return response()->json([
-            'message' => 'تم إضافة بيانات السائق بنجاح',
+            'message' => $data['staff_category'] === Driver::CATEGORY_WORKSHOP_STAFF
+                ? 'تم إضافة بيانات كادر الورشة بنجاح'
+                : 'تم إضافة بيانات السائق بنجاح',
             'data' => $this->service->detailPayload($record, false),
         ], 201);
     }
@@ -135,38 +144,63 @@ class DriverController extends Controller
 
         $validated = $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:20480'],
+            'staff_category' => ['nullable', 'string', 'in:driver,workshop_staff'],
         ], [
             'file.required' => 'يرجى اختيار ملف CSV أو Excel لرفع البيانات.',
             'file.mimes' => 'صيغة الملف غير مدعومة. الصيغ المدعومة: CSV, XLSX, XLS.',
         ]);
 
+        $staffCategory = (string) ($validated['staff_category'] ?? Driver::CATEGORY_DRIVER);
+        $redirectParams = $staffCategory === Driver::CATEGORY_WORKSHOP_STAFF
+            ? ['view' => 'workshop_staff']
+            : [];
+
         try {
-            $result = $this->importService->importDirect('drivers', $validated['file']);
+            $result = $this->importService->importDirect('drivers', $validated['file'], [
+                'staff_category' => $staffCategory,
+            ]);
         } catch (Throwable $e) {
             return redirect()
-                ->route('drivers.index')
+                ->route('drivers.index', $redirectParams)
                 ->withErrors(['file' => 'تعذر قراءة الملف المرفق: '.$e->getMessage()]);
         }
 
         if ($result['imported'] === 0) {
             return redirect()
-                ->route('drivers.index')
+                ->route('drivers.index', $redirectParams)
                 ->withErrors(['file' => 'لم يتم العثور على صفوف صالحة للاستيراد داخل الملف.']);
         }
 
+        $message = $staffCategory === Driver::CATEGORY_WORKSHOP_STAFF
+            ? "تم استيراد {$result['imported']} موظف في كادر الورش بنجاح (وحذف {$result['deleted']} سجل قديم)."
+            : "تم استيراد {$result['imported']} سائق بنجاح وربط الفروع والمواقع تلقائياً من توزيعة المعدات (وحذف {$result['deleted']} سجل قديم).";
+
         return redirect()
-            ->route('drivers.index')
-            ->with('status', "تم استيراد {$result['imported']} سائق بنجاح وربط الفروع والمواقع تلقائياً من توزيعة المعدات (وحذف {$result['deleted']} سجل قديم).");
+            ->route('drivers.index', $redirectParams)
+            ->with('status', $message);
     }
 
-    public function purgeAll(): RedirectResponse
+    public function purgeAll(Request $request): RedirectResponse
     {
         Gate::authorize('delete-deviations');
 
-        $deleted = $this->importService->purgeAll('drivers');
+        $staffCategory = (string) $request->input('staff_category', Driver::CATEGORY_DRIVER);
+        if (! in_array($staffCategory, [Driver::CATEGORY_DRIVER, Driver::CATEGORY_WORKSHOP_STAFF], true)) {
+            $staffCategory = Driver::CATEGORY_DRIVER;
+        }
+
+        $deleted = $this->importService->purgeAll('drivers', [
+            'staff_category' => $staffCategory,
+        ]);
+
+        $redirectParams = $staffCategory === Driver::CATEGORY_WORKSHOP_STAFF
+            ? ['view' => 'workshop_staff']
+            : [];
+
+        $label = $staffCategory === Driver::CATEGORY_WORKSHOP_STAFF ? 'كادر الورش' : 'السائقين';
 
         return redirect()
-            ->route('drivers.index')
-            ->with('status', "تم تفريغ جدول السائقين وحذف جميع البيانات ({$deleted} سجل) بنجاح.");
+            ->route('drivers.index', $redirectParams)
+            ->with('status', "تم تفريغ جدول {$label} وحذف جميع البيانات ({$deleted} سجل) بنجاح.");
     }
 }

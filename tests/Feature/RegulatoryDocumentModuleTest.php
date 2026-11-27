@@ -262,8 +262,9 @@ it('validates, filters, updates, soft-deletes, audits, and exports regulatory do
         ->assertOk()
         ->streamedContent();
 
-    expect($csv)->toContain('EQ-REN-99')
-        ->and($csv)->not->toContain('EQ-VAL-11')
+    $exportedText = extractExportText($csv);
+    expect($exportedText)->toContain('EQ-REN-99')
+        ->and($exportedText)->not->toContain('EQ-VAL-11')
         ->and(AuditLog::query()->where('event', AuditEvent::Exported)->where('auditable_type', RegulatoryDocument::class)->count())->toBe(1);
 
     // Viewer cannot delete; Admin can soft-delete

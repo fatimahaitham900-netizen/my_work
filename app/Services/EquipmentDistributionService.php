@@ -365,7 +365,7 @@ class EquipmentDistributionService
 
         // Pull drivers filtered by matching branch / site_location if active,
         // and link each driver's equipment_code to its equipment_type from equipment_distributions.
-        $driversQuery = Driver::query();
+        $driversQuery = Driver::query()->where('staff_category', Driver::CATEGORY_DRIVER);
         foreach (['branch', 'site_location'] as $column) {
             $val = trim((string) ($filters[$column] ?? ''));
             if ($val !== '') {
