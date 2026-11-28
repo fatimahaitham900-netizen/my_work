@@ -31,6 +31,7 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use SimpleXMLElement;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,19 +53,8 @@ class ModuleSpreadsheetImportService
             return ['imported' => 0, 'deleted' => 0];
         }
 
-        // Auto-detect header row among first 10 rows
-        $headerRowIndex = 0;
-        $bestMatchCount = 0;
-        $headerMap = [];
-
-        foreach (array_slice($rawRows, 0, 10, true) as $idx => $candidateRow) {
-            $candidateMap = $this->buildHeaderMap($candidateRow, $config['dictionary']);
-            if (count($candidateMap) > $bestMatchCount) {
-                $bestMatchCount = count($candidateMap);
-                $headerRowIndex = $idx;
-                $headerMap = $candidateMap;
-            }
-        }
+        // Smart auto-detection of header row among first 15 rows (works with BOTH known & fully custom flexible columns)
+        [$headerRowIndex, $headerMap] = $this->detectHeaderRow($rawRows, $config['dictionary']);
 
         $headerRow = $rawRows[$headerRowIndex] ?? [];
         $exactHeaderMap = $this->buildExactHeaderMap($headerRow);
@@ -89,8 +79,10 @@ class ModuleSpreadsheetImportService
 
         /** @var class-string<Model> $modelClass */
         $modelClass = $config['model'];
+        $tableName = (new $modelClass)->getTable();
+        $tableSchema = $this->describeTableColumns($tableName);
 
-        return DB::transaction(function () use ($modelClass, $module, $recordsToInsert, $context): array {
+        return DB::transaction(function () use ($modelClass, $module, $recordsToInsert, $context, $tableSchema): array {
             $deleteQuery = $modelClass::query();
 
             // Scoped replacement when user imports under a specific tab (e.g. Regulatory Document Type or Financial Support Month)
@@ -110,7 +102,8 @@ class ModuleSpreadsheetImportService
             $deletedCount = $deleteQuery->delete();
 
             foreach ($recordsToInsert as $attributes) {
-                $modelClass::query()->create($attributes);
+                $safeAttributes = $this->sanitizeAttributesForTable($attributes, $tableSchema);
+                $modelClass::query()->create($safeAttributes);
             }
 
             if (in_array($module, ['drivers', 'equipment-distributions'], true)) {
@@ -604,7 +597,10 @@ class ModuleSpreadsheetImportService
     {
         $raw = [];
         foreach ($headerMap as $colIndex => $attrKey) {
-            $raw[$attrKey] = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : '';
+            $cellValue = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : '';
+            if (! isset($raw[$attrKey]) || ($raw[$attrKey] === '' && $cellValue !== '')) {
+                $raw[$attrKey] = $cellValue;
+            }
         }
 
         $dateFields = $config['dates'] ?? [];
@@ -740,12 +736,14 @@ class ModuleSpreadsheetImportService
                 || trim((string) ($attributes['branch'] ?? '')) !== ''
                 || trim((string) ($attributes['project'] ?? '')) !== '';
 
-            // Skip Excel footer SUM rows that only contain a numeric total in rental_amount
-            if (! empty($headerMap) && ! $hasDescriptor) {
+            // Only skip Excel footer SUM rows that contain a single isolated numeric total and no other columns
+            if (! empty($headerMap) && ! $hasDescriptor && count($nonEmptyExact) <= 1) {
                 return null;
             }
 
             $attributes['rental_amount'] = $attributes['rental_amount'] ?? 0;
+        } elseif ($module === 'transport-violations') {
+            $attributes['amount'] = $attributes['amount'] ?? 0;
         } elseif ($module === 'drivers') {
             $attributes['staff_category'] = ! empty($context['staff_category'])
                 ? (string) $context['staff_category']
@@ -786,11 +784,147 @@ class ModuleSpreadsheetImportService
             return [];
         }
 
+        // Detect actual XLSX ZIP magic bytes regardless of file extension (handles renamed .xls/.xlsx on hosting)
+        $magic = @file_get_contents($path, false, null, 0, 4);
+        if ($magic === "PK\x03\x04") {
+            return $this->parseXlsx($path, $config['dictionary']);
+        }
+
         return match ($extension) {
             'xlsx' => $this->parseXlsx($path, $config['dictionary']),
             'xls' => $this->parseXls($path, $config['dictionary']),
             default => $this->parseCsv($path),
         };
+    }
+
+    /**
+     * Detect the actual header row among the first 15 rows.
+     * Supports both dictionary-matched sheets and completely custom/flexible column layouts
+     * (even when Row 0 is a single-cell merged title banner).
+     *
+     * @param  list<list<string>>  $rawRows
+     * @param  array<string, list<string>>  $dictionary
+     * @return array{0: int, 1: array<int, string>}
+     */
+    protected function detectHeaderRow(array $rawRows, array $dictionary): array
+    {
+        $bestIdx = 0;
+        $bestMap = [];
+        $bestScore = -1;
+
+        foreach (array_slice($rawRows, 0, 15, true) as $idx => $candidateRow) {
+            $candidateMap = $this->buildHeaderMap($candidateRow, $dictionary);
+            $matchCount = count($candidateMap);
+
+            $textHeadersCount = 0;
+            foreach ($candidateRow as $cell) {
+                $trimmed = trim((string) $cell);
+                if ($trimmed !== '' && ! is_numeric(str_replace([',', '%', '.', '-', '/'], '', $trimmed))) {
+                    $textHeadersCount++;
+                }
+            }
+
+            // Dictionary matches weigh heavily; when custom/flexible columns don't match the dictionary,
+            // prefer the first multi-column text header row over a 1-cell title banner.
+            $score = ($matchCount * 100) + ($textHeadersCount >= 2 ? (10 + $textHeadersCount) : $textHeadersCount);
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestIdx = (int) $idx;
+                $bestMap = $candidateMap;
+            }
+        }
+
+        return [$bestIdx, $bestMap];
+    }
+
+    /**
+     * Inspect table columns once per import to guarantee 100% MySQL/MariaDB strict-mode compatibility.
+     *
+     * @return array<string, array{nullable: bool, has_default: bool, max_length: int|null, type_name: string}>
+     */
+    protected function describeTableColumns(string $table): array
+    {
+        $schema = [];
+
+        try {
+            foreach (Schema::getColumns($table) as $col) {
+                $name = (string) ($col['name'] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+
+                $type = strtolower((string) ($col['type'] ?? ''));
+                $typeName = strtolower((string) ($col['type_name'] ?? $type));
+                $maxLength = null;
+
+                if (preg_match('/(?:var)?char\((\d+)\)/i', $type, $m)) {
+                    $maxLength = (int) $m[1];
+                }
+
+                $schema[$name] = [
+                    'nullable' => (bool) ($col['nullable'] ?? true),
+                    'has_default' => ($col['default'] ?? null) !== null,
+                    'max_length' => $maxLength,
+                    'type_name' => $typeName,
+                ];
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Ensure every attribute is safe for MySQL/MariaDB strict mode:
+     * - Drops unknown DB columns (full values are already preserved in extra_columns)
+     * - Never sends explicit NULL to a NOT NULL column (lets DB default apply or sets safe zero/empty)
+     * - Prevents VARCHAR length overflow (1406 Data too long) while keeping full value in extra_columns
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, array{nullable: bool, has_default: bool, max_length: int|null, type_name: string}>  $tableSchema
+     * @return array<string, mixed>
+     */
+    protected function sanitizeAttributesForTable(array $attributes, array $tableSchema): array
+    {
+        if (empty($tableSchema)) {
+            return $attributes;
+        }
+
+        $clean = [];
+
+        foreach ($attributes as $key => $value) {
+            if (! isset($tableSchema[$key])) {
+                continue;
+            }
+
+            $meta = $tableSchema[$key];
+
+            if ($value === null) {
+                if (! $meta['nullable']) {
+                    if ($meta['has_default']) {
+                        // Omit so MySQL/MariaDB uses the column's DEFAULT value
+                        continue;
+                    }
+
+                    $typeName = $meta['type_name'];
+                    if (str_contains($typeName, 'int') || str_contains($typeName, 'dec') || str_contains($typeName, 'num') || str_contains($typeName, 'float') || str_contains($typeName, 'double')) {
+                        $value = 0;
+                    } elseif ($typeName === 'date') {
+                        $value = now()->format('Y-m-d');
+                    } else {
+                        $value = '';
+                    }
+                }
+            } elseif (is_string($value) && $meta['max_length'] !== null && mb_strlen($value, 'UTF-8') > $meta['max_length']) {
+                $value = mb_substr($value, 0, $meta['max_length'], 'UTF-8');
+            }
+
+            $clean[$key] = $value;
+        }
+
+        return $clean;
     }
 
     /**
@@ -810,9 +944,13 @@ class ModuleSpreadsheetImportService
                 continue;
             }
 
-            // Phase 1: Exact match
+            // Phase 1: Exact match (do not map two different columns onto the same DB attribute)
             $matched = false;
             foreach ($dictionary as $attribute => $synonyms) {
+                if (in_array($attribute, $map, true)) {
+                    continue;
+                }
+
                 foreach ($synonyms as $synonym) {
                     if ($normalized === $this->cleanHeaderString($synonym)) {
                         $map[$colIndex] = $attribute;
@@ -1168,7 +1306,17 @@ class ModuleSpreadsheetImportService
                     $idx = (int) ($cell->v ?? -1);
                     $value = $sharedStrings[$idx] ?? '';
                 } elseif ($type === 'inlineStr') {
-                    $value = (string) ($cell->is->t ?? '');
+                    if (isset($cell->is->t)) {
+                        $value = (string) $cell->is->t;
+                    } elseif (isset($cell->is->r)) {
+                        $rich = '';
+                        foreach ($cell->is->r as $r) {
+                            $rich .= (string) ($r->t ?? '');
+                        }
+                        $value = $rich;
+                    }
+                } elseif ($type === 'b') {
+                    $value = ((string) ($cell->v ?? '')) === '1' ? 'نعم' : 'لا';
                 } elseif (isset($cell->v)) {
                     $value = (string) $cell->v;
                 }

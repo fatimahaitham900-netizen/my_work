@@ -19,8 +19,8 @@ final class ExtraColumns
         $headers = [];
 
         foreach ($records as $record) {
-            $extra = $record->extra_columns ?? null;
-            if (! is_array($extra)) {
+            $extra = self::decodeExtra($record->extra_columns ?? null);
+            if ($extra === null) {
                 continue;
             }
 
@@ -45,8 +45,8 @@ final class ExtraColumns
      */
     public static function exactValue(object $record, string $header): string
     {
-        $extra = $record->extra_columns ?? null;
-        if (! is_array($extra)) {
+        $extra = self::decodeExtra($record->extra_columns ?? null);
+        if ($extra === null) {
             return '—';
         }
 
@@ -82,8 +82,8 @@ final class ExtraColumns
         $headers = [];
 
         foreach ($records as $record) {
-            $extra = $record->extra_columns ?? null;
-            if (! is_array($extra)) {
+            $extra = self::decodeExtra($record->extra_columns ?? null);
+            if ($extra === null) {
                 continue;
             }
 
@@ -96,6 +96,27 @@ final class ExtraColumns
         }
 
         return $headers;
+    }
+
+    /**
+     * Safely decode extra_columns whether Eloquent cast returned an array or MariaDB/MySQL returned a JSON string.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function decodeExtra(mixed $extra): ?array
+    {
+        if (is_array($extra)) {
+            return $extra;
+        }
+
+        if (is_string($extra) && trim($extra) !== '') {
+            $decoded = json_decode($extra, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return null;
     }
 
     private static function isMoneyHeader(string $header): bool

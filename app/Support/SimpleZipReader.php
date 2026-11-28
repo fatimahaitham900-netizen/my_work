@@ -16,11 +16,15 @@ final class SimpleZipReader
     /** @var array<string, string> */
     private array $entries = [];
 
+    /** @var array<string, string> Lowercase path => canonical entry key */
+    private array $lowerIndex = [];
+
     private bool $opened = false;
 
     public function open(string $path): bool
     {
         $this->entries = [];
+        $this->lowerIndex = [];
         $this->opened = false;
 
         if (! is_file($path) || ! is_readable($path)) {
@@ -35,7 +39,7 @@ final class SimpleZipReader
                     if ($name !== false) {
                         $content = $zip->getFromIndex($i);
                         if ($content !== false) {
-                            $this->entries[$name] = $content;
+                            $this->registerEntry($name, $content);
                         }
                     }
                 }
@@ -55,9 +59,45 @@ final class SimpleZipReader
             return false;
         }
 
-        $normalized = ltrim($name, '/');
+        $normalized = $this->normalizeEntryPath($name);
 
-        return $this->entries[$normalized] ?? false;
+        if (isset($this->entries[$normalized])) {
+            return $this->entries[$normalized];
+        }
+
+        $lower = strtolower($normalized);
+        if (isset($this->lowerIndex[$lower])) {
+            return $this->entries[$this->lowerIndex[$lower]] ?? false;
+        }
+
+        return false;
+    }
+
+    private function registerEntry(string $name, string $content): void
+    {
+        $normalized = $this->normalizeEntryPath($name);
+        $this->entries[$normalized] = $content;
+        $this->lowerIndex[strtolower($normalized)] = $normalized;
+    }
+
+    private function normalizeEntryPath(string $name): string
+    {
+        $clean = str_replace('\\', '/', $name);
+        $clean = ltrim($clean, '/');
+        $parts = [];
+        foreach (explode('/', $clean) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+            if ($segment === '..') {
+                array_pop($parts);
+
+                continue;
+            }
+            $parts[] = $segment;
+        }
+
+        return implode('/', $parts);
     }
 
     /**
@@ -129,11 +169,11 @@ final class SimpleZipReader
             $method = (int) $header['method'];
 
             if ($method === 0) {
-                $this->entries[ltrim($name, '/')] = $compressed;
+                $this->registerEntry($name, $compressed);
             } elseif ($method === 8 && function_exists('gzinflate')) {
                 $inflated = @gzinflate($compressed);
                 if ($inflated !== false) {
-                    $this->entries[ltrim($name, '/')] = $inflated;
+                    $this->registerEntry($name, $inflated);
                 }
             }
         }
@@ -143,4 +183,3 @@ final class SimpleZipReader
         return $this->opened;
     }
 }
-

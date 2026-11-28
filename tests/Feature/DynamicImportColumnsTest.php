@@ -3,8 +3,10 @@
 use App\Enums\UserRole;
 use App\Models\EquipmentBreakdown;
 use App\Models\RentalEquipment;
+use App\Models\TransportViolation;
 use App\Models\User;
 use App\Support\ExtraColumns;
+use App\Support\StyledXlsxWriter;
 use Illuminate\Http\UploadedFile;
 
 it('renders only the exact imported columns in their exact file order with no extra or missing columns', function () {
@@ -152,4 +154,81 @@ it('allows importing files containing only custom columns and shows only those c
         'مهمة ميدانية',
         'قصوى',
     ]);
+});
+
+it('detects custom multi-column header row even when Row 0 is a single-cell title banner in real XLSX', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $xlsxPath = StyledXlsxWriter::writeToTempFile(
+        ['البند المخصص', 'اسم الجهة', 'المسؤول المباشر', 'حالة التنفيذ'],
+        [
+            ['توريد قطع', 'الورشة المركزية', 'م. طارق الحربي', 'مكتمل'],
+            ['صيانة عاجلة', 'مشروع الرياض', 'م. ناصر القحطاني', 'قيد العمل'],
+        ],
+        'كشف مخصص لشهر نوفمبر 2026',
+        'بيانات مخصصة',
+    );
+
+    try {
+        $file = UploadedFile::fake()->createWithContent('custom-banner.xlsx', (string) file_get_contents($xlsxPath));
+
+        $this->actingAs($admin)
+            ->post(route('transport-violations.import.direct'), ['file' => $file])
+            ->assertRedirect();
+
+        $response = $this->actingAs($admin)
+            ->get(route('transport-violations.index'))
+            ->assertOk();
+
+        $html = $response->getContent();
+        preg_match_all('/<th\b[^>]*>(.*?)<\/th>/su', $html, $matches);
+        $renderedHeaders = array_map(static fn (string $h): string => trim(strip_tags($h)), $matches[1]);
+
+        expect($renderedHeaders)->toBe([
+            'البند المخصص',
+            'اسم الجهة',
+            'المسؤول المباشر',
+            'حالة التنفيذ',
+        ]);
+
+        $response->assertSeeInOrder(['توريد قطع', 'الورشة المركزية', 'م. طارق الحربي', 'مكتمل']);
+    } finally {
+        @unlink($xlsxPath);
+    }
+});
+
+it('safely imports blank NOT NULL numeric fields and oversized strings without truncation errors on strict MySQL', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $longText = str_repeat('وصف تفصيلي طويل جدا للمخالفة ', 15); // > 400 chars
+
+    $csv = implode("\n", [
+        'رقم المخالفة,اللوحة,المبلغ,ملاحظة إضافية مخصصة',
+        "VIO-991,{$longText},,بيان مخصص كامل",
+    ]);
+
+    $file = UploadedFile::fake()->createWithContent('strict-mysql-safe.csv', "\xEF\xBB\xBF".$csv);
+
+    $this->actingAs($admin)
+        ->post(route('transport-violations.import.direct'), ['file' => $file])
+        ->assertRedirect();
+
+    $record = TransportViolation::query()->firstOrFail();
+
+    expect((float) $record->amount)->toBe(0.0)
+        ->and(ExtraColumns::exactValue($record, 'اللوحة'))->toBe(trim($longText))
+        ->and(ExtraColumns::exactValue($record, 'ملاحظة إضافية مخصصة'))->toBe('بيان مخصص كامل');
+});
+
+it('decodes extra_columns even if MariaDB returns a raw JSON string', function () {
+    $fakeRow = (object) [
+        'extra_columns' => json_encode([
+            ExtraColumns::EXACT_KEY => [
+                'العمود الأول' => 'قيمة أ',
+                'العمود الثاني' => 'قيمة ب',
+            ],
+        ], JSON_UNESCAPED_UNICODE),
+    ];
+
+    expect(ExtraColumns::exactHeaders([$fakeRow]))->toBe(['العمود الأول', 'العمود الثاني'])
+        ->and(ExtraColumns::exactValue($fakeRow, 'العمود الأول'))->toBe('قيمة أ');
 });
